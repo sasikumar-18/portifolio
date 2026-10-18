@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4K OLED Neon Blue Tunnel - Meditation Screensaver</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, monospace;
+    }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* Minimalist Meditation HUD & Content Overlay */
+    #content-overlay {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem;
+      pointer-events: auto;
+    }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .badge-oled {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      background: rgba(0, 240, 255, 0.08);
+      color: #00f0ff;
+      border-radius: 9999px;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+      backdrop-filter: blur(8px);
+    }
+    .badge-oled .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #00f0ff;
+      box-shadow: 0 0 10px #00f0ff;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    .hero-center {
+      max-width: 680px;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 40px rgba(0, 240, 255, 0.55), 0 0 80px rgba(0, 102, 255, 0.35);
+    }
+    .hero-title span.accent {
+      color: #00f0ff;
+      text-shadow: 0 0 35px #00f0ff;
+    }
+    .hero-sub {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 1.5rem;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    }
+    .hud-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.45);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1rem;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hypnotic 4K OLED Neon Blue Tunnel Canvas -->
+  <div id="canvas-container">
+    <canvas id="bg-canvas"></canvas>
+  </div>
+
+  <!-- Transparent Foreground Content Overlay -->
+  <div id="content-overlay">
+    <header class="hud-header">
+      <div>
+        <span class="badge-oled"><span class="dot"></span>4K OLED // NEON BLUE TUNNEL</span>
+      </div>
+      <div>
+        <span>FPS: <strong id="fps-counter" style="color:#ffffff">60</strong> &bull; MODE: HYPNOTIC MEDITATION</span>
+      </div>
+    </header>
+
+    <div class="hero-center">
+      <h1 class="hero-title">
+        SINGANABOYINA <br />
+        <span class="accent">SASIKUMAR</span>
+      </h1>
+      <p class="hero-sub">
+        Full-Stack Software Engineer &amp; Machine Learning Architect.
+        Building high-performance digital systems and next-generation interactive experiences.
+      </p>
+    </div>
+
+    <footer class="hud-footer">
+      <span>AI.NEON.WARP // INFINITE VORTEX SPEED: 1.0X</span>
+      <span>OLED DEEP BLACK #000000 &bull; NEON CYAN #00f0ff &bull; COBALT BLUE #0066ff</span>
+      <span>PREFERS-REDUCED-MOTION: SUPPORTED</span>
+    </footer>
+  </div>
+
+  <script>
+    /**
+     * 4K OLED NEON BLUE COLOR TUNNEL ENGINE
+     * 
+     * Visual Aesthetics:
+     * - Pure OLED pitch black: #000000
+     * - Electric Neon Cyan: #00f0ff, Cobalt Glow: #0066ff, Deep Blue: #0033aa
+     * - Pure White: #ffffff highlight filaments
+     * 
+     * Features:
+     * 1. Infinite Hypnotic 3D Tunnel Flythrough:
+     *    - Concentric smooth polygon rings (hexagon/octagon) receding into deep perspective
+     *    - Seamless depth recycling for infinite warp flight
+     *    - Harmonic rotation twisting forming a cosmic vortex spiral
+     * 2. Longitudinal Neon Laser Rails:
+     *    - Connecting vertex light beams shooting along the tunnel walls to the viewer
+     * 3. Forward Hyperspace Star Streaks:
+     *    - 140+ 3D particles accelerating towards camera with motion stretch
+     * 4. Meditative Breathing Modulation:
+     *    - Rhythmic 0.12Hz expansion wave pulsating the glow intensity smoothly
+     * 5. Interactive Camera & Parallax:
+     *    - Mouse/touch smoothly steers tunnel vanishing point for immersive depth
+     *    - 60 FPS capped dpr, tab visibility pause, prefers-reduced-motion support
+     */
+
+    // ==========================================
+    // TUNABLES & CONFIGURATION
+    // ==========================================
+    const CONFIG = {
+      BG_COLOR: '#000000',
+      NEON_CYAN: '#00f0ff',
+      NEON_BLUE: '#0066ff',
+      WHITE: '#ffffff',
+      RING_COUNT: 42,             // Number of concentric tunnel rings
+      SIDES: 8,                   // Polygon geometry: 8 (Octagon) or 6 (Hexagon)
+      MAX_DEPTH: 1600,            // Tunnel depth span
+      SPEED: 4.8,                 // Flythrough forward warp speed
+      TWIST_SPEED: 0.0006,        // Rotation spiral factor along depth
+      FOV: 680,                   // Perspective projection field of view
+      MAX_DPR: 2,                 // Cap devicePixelRatio for 60fps
+      STAR_COUNT: 140,            // Forward streaking particles
+      PARALLAX_FACTOR: 0.06,      // Sensitivity to mouse steering
+    };
+
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    const fpsCounter = document.getElementById('fps-counter');
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetMouseX = 0;
+    let targetMouseY = 0;
+    let isTabVisible = true;
+    let frameCount = 0;
+    let fpsTime = 0;
+    let timeOffset = 0;
+
+    // ==========================================
+    // PROCEDURAL ENTITIES
+    // ==========================================
+    const stars = [];
+
+    function initStars() {
+      stars.length = 0;
+      for (let i = 0; i < CONFIG.STAR_COUNT; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * 450 + 50;
+        stars.push({
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist,
+          z: Math.random() * CONFIG.MAX_DEPTH,
+          speed: Math.random() * 3 + CONFIG.SPEED,
+          size: Math.random() * 2 + 1,
+          isCyan: Math.random() > 0.35,
+        });
+      }
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.scale(dpr, dpr);
+
+      initStars();
+
+      if (prefersReducedMotion) {
+        drawFrame(0);
+      }
+    }
+    window.addEventListener('resize', resize);
+
+    window.addEventListener('mousemove', (e) => {
+      targetMouseX = (e.clientX - width / 2);
+      targetMouseY = (e.clientY - height / 2);
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        targetMouseX = (e.touches[0].clientX - width / 2);
+        targetMouseY = (e.touches[0].clientY - height / 2);
+      }
+    }, { passive: true });
+
+    document.addEventListener('visibilitychange', () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible && !prefersReducedMotion) {
+        requestAnimationFrame(loop);
+      }
+    });
+
+    // ==========================================
+    // 3D PERSPECTIVE PROJECTION
+    // ==========================================
+    function project(x, y, z, cx, cy) {
+      if (z <= 1) return { x: 0, y: 0, scale: 0, inView: false };
+      const scale = CONFIG.FOV / z;
+      const screenX = cx + x * scale;
+      const screenY = cy + y * scale;
+      return {
+        x: screenX,
+        y: screenY,
+        scale,
+        inView: screenX >= -200 && screenX <= width + 200 && screenY >= -200 && screenY <= height + 200
+      };
+    }
+
+    // ==========================================
+    // RENDER PIPELINE
+    // ==========================================
+
+    // 1. OLED Pitch Black Base & Soft Neon Back-Glow
+    function drawBackground(cx, cy, breath) {
+      // True 0% emission OLED black
+      ctx.fillStyle = CONFIG.BG_COLOR;
+      ctx.fillRect(0, 0, width, height);
+
+      // Deep Singularity Hyperspace Glow at tunnel vortex center
+      const vortexGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(width, height) * 0.55);
+      vortexGlow.addColorStop(0, `rgba(0, 240, 255, ${0.16 * breath})`);
+      vortexGlow.addColorStop(0.35, `rgba(0, 102, 255, ${0.08 * breath})`);
+      vortexGlow.addColorStop(0.7, 'rgba(0, 30, 80, 0.03)');
+      vortexGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = vortexGlow;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // 2. Forward Hyperspace Star Streaks
+    function drawWarpStars(cx, cy) {
+      ctx.save();
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+
+        if (!prefersReducedMotion) {
+          s.z -= s.speed;
+          if (s.z <= 10) {
+            s.z = CONFIG.MAX_DEPTH;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 450 + 50;
+            s.x = Math.cos(angle) * dist;
+            s.y = Math.sin(angle) * dist;
+          }
+        }
+
+        const p1 = project(s.x, s.y, s.z, cx, cy);
+        const pPrev = project(s.x, s.y, s.z + 30, cx, cy);
+
+        if (!p1.inView) continue;
+
+        const alpha = Math.min(1.0, (CONFIG.MAX_DEPTH - s.z) / 400);
+
+        // Motion blur light streak
+        ctx.strokeStyle = s.isCyan
+          ? `rgba(0, 240, 255, ${alpha * 0.75})`
+          : `rgba(255, 255, 255, ${alpha * 0.9})`;
+
+        ctx.lineWidth = Math.max(1, s.size * p1.scale * 1.5);
+        ctx.beginPath();
+        ctx.moveTo(pPrev.x, pPrev.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 3. MAIN ELEMENT: INFINITE 3D NEON BLUE COLOR TUNNEL
+    function drawNeonTunnel(time, cx, cy, breath) {
+      ctx.save();
+
+      const numRings = CONFIG.RING_COUNT;
+      const ringSpacing = CONFIG.MAX_DEPTH / numRings;
+      const baseRadius = 380;
+      const sides = CONFIG.SIDES;
+
+      // Calculate 3D vertices for all rings
+      const rings = [];
+
+      for (let i = 0; i < numRings; i++) {
+        // Continuous z-motion forward
+        let z = (i * ringSpacing - (timeOffset % ringSpacing) + CONFIG.MAX_DEPTH) % CONFIG.MAX_DEPTH;
+        if (z < 30) z = 30; // camera clip guard
+
+        // Spiral rotation angle along depth
+        const rot = (time * 0.0008) + (z * CONFIG.TWIST_SPEED);
+
+        // Vertices for polygon ring
+        const vertices = [];
+        for (let s = 0; s < sides; s++) {
+          const a = (s / sides) * Math.PI * 2 + rot;
+          // Polygon breathing radius modulation
+          const r = baseRadius * (1 + Math.sin(time * 0.001 + z * 0.003) * 0.06);
+          const px = Math.cos(a) * r;
+          const py = Math.sin(a) * r;
+          const proj = project(px, py, z, cx, cy);
+          vertices.push(proj);
+        }
+
+        rings.push({
+          z,
+          vertices,
+          depthRatio: 1 - (z / CONFIG.MAX_DEPTH), // 0 (far) to 1 (near)
+        });
+      }
+
+      // Sort furthest to nearest for correct alpha compositing
+      rings.sort((a, b) => b.z - a.z);
+
+      // --- PASS 1: LONGITUDINAL NEON LASER RAILS ---
+      // Connect each vertex between consecutive rings along tunnel walls
+      ctx.strokeStyle = `rgba(0, 102, 255, ${0.28 * breath})`;
+      ctx.lineWidth = 1.2;
+
+      for (let s = 0; s < sides; s++) {
+        ctx.beginPath();
+        for (let k = 0; k < rings.length; k++) {
+          const v = rings[k].vertices[s];
+          if (!v.inView) continue;
+          if (k === 0) ctx.moveTo(v.x, v.y);
+          else ctx.lineTo(v.x, v.y);
+        }
+        ctx.stroke();
+      }
+
+      // --- PASS 2: CONCENTRIC GLOWING NEON POLYGON RINGS ---
+      for (let k = 0; k < rings.length; k++) {
+        const ring = rings[k];
+        const d = ring.depthRatio;
+        const verts = ring.vertices;
+
+        // Color transition: deep blue at center -> neon electric cyan -> pure white highlight
+        let strokeColor, glowColor, lineWidth, glowBlur;
+
+        if (d > 0.75) {
+          // Nearest rings: brilliant neon cyan with white highlight
+          strokeColor = `rgba(255, 255, 255, ${0.9 * breath})`;
+          glowColor = '#00f0ff';
+          lineWidth = Math.max(2.2, 5.0 * verts[0].scale);
+          glowBlur = 24;
+        } else if (d > 0.4) {
+          // Middle rings: electric cyan with neon bloom
+          strokeColor = `rgba(0, 240, 255, ${(d * 1.1) * breath})`;
+          glowColor = '#0066ff';
+          lineWidth = Math.max(1.4, 3.2 * verts[0].scale);
+          glowBlur = 14;
+        } else {
+          // Deep far rings: cobalt blue receding into infinity
+          strokeColor = `rgba(0, 102, 255, ${(d * 1.4) * breath})`;
+          glowColor = '#0033aa';
+          lineWidth = Math.max(0.8, 1.8 * verts[0].scale);
+          glowBlur = 6;
+        }
+
+        // Draw outer bloom glow
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = glowBlur;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = lineWidth;
+
+        ctx.beginPath();
+        for (let s = 0; s < sides; s++) {
+          const v = verts[s];
+          if (s === 0) ctx.moveTo(v.x, v.y);
+          else ctx.lineTo(v.x, v.y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Corner node LEDs on the rings
+        if (k % 2 === 0) {
+          for (let s = 0; s < sides; s++) {
+            const v = verts[s];
+            if (!v.inView) continue;
+            ctx.fillStyle = d > 0.6 ? '#ffffff' : '#00f0ff';
+            ctx.beginPath();
+            ctx.arc(v.x, v.y, Math.max(1.5, 3.2 * v.scale), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      ctx.shadowBlur = 0; // reset
+      ctx.restore();
+    }
+
+    // 4. Subtle Chromatic Meditation Waves & Vignette
+    function drawVignette(cx, cy) {
+      ctx.save();
+      // Outer border blackout ensuring clean 100% OLED dark border
+      const outerGrad = ctx.createRadialGradient(cx, cy, Math.min(width, height) * 0.4, cx, cy, Math.max(width, height) * 0.75);
+      outerGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      outerGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.4)');
+      outerGrad.addColorStop(1, 'rgba(0, 0, 0, 0.96)');
+
+      ctx.fillStyle = outerGrad;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+    }
+
+    // ==========================================
+    // MAIN ANIMATION LOOP
+    // ==========================================
+    function drawFrame(time) {
+      // Smooth camera steering with mouse parallax
+      mouseX += (targetMouseX - mouseX) * 0.05;
+      mouseY += (targetMouseY - mouseY) * 0.05;
+
+      // Tunnel center vanishing point responds to cursor
+      const cx = width / 2 + (mouseX * CONFIG.PARALLAX_FACTOR * 8);
+      const cy = height / 2 + (mouseY * CONFIG.PARALLAX_FACTOR * 8);
+
+      // Relaxing 0.12Hz meditation breathing wave
+      const breath = Math.sin(time * 0.0015) * 0.2 + 0.9;
+
+      if (!prefersReducedMotion) {
+        timeOffset += CONFIG.SPEED;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      drawBackground(cx, cy, breath);
+      drawWarpStars(cx, cy);
+      drawNeonTunnel(time, cx, cy, breath);
+      drawVignette(cx, cy);
+    }
+
+    function loop(currentTime) {
+      if (!isTabVisible) return;
+      drawFrame(currentTime);
+
+      frameCount++;
+      if (currentTime - fpsTime >= 1000) {
+        fpsCounter.textContent = frameCount;
+        frameCount = 0;
+        fpsTime = currentTime;
+      }
+
+      if (!prefersReducedMotion) {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    // Initialize
+    resize();
+    if (!prefersReducedMotion) {
+      requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>

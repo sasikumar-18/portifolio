@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-dark: #0a0a0a;
+  --bg-light: #f5f5f0;
+  --lime: #00f0ff;
+  --neon-blue: #00f0ff;
+  color-scheme: dark light;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Light / Dark Mode transition */
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+html.dark body {
+  background-color: #0a0a0a;
+  color: #f5f5f0;
+}
+
+html:not(.dark) body {
+  background-color: #f5f5f0;
+  color: #0a0a0a;
+}
+
+/* Neon Blue Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 9999px;
+  border: 2px solid #0a0a0a;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #d4d4cc;
+  border-radius: 9999px;
+  border: 2px solid #f5f5f0;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #00b4d8;
+}
+
+/* Neon Blue Selection */
+::selection {
+  background-color: #00f0ff;
+  color: #000000;
+}
+
+/* Ambient Grain Texture */
+.bg-grain {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+html:not(.dark) .bg-grain {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+/* Marquee infinite scroll container */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+
+/* Custom cursor styling for fine pointers */
+@media (hover: hover) and (pointer: fine) {
+  body, a, button, [role="button"], .interactive {
+    cursor: none !important;
+  }
+  input, textarea, select {
+    cursor: text !important;
+  }
+}
+
+/* Hide custom cursor on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .custom-cursor {
+    display: none !important;
+  }
+}

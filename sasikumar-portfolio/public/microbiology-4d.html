@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4D Cinematic Microbiology Background</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #05060a;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', 'Space Grotesk', -apple-system, BlinkMacSystemFont, monospace;
+    }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* Transparent HUD & Portfolio Text Overlay */
+    #content-overlay {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem;
+      pointer-events: auto;
+    }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .badge-red {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid rgba(255, 59, 47, 0.4);
+      background: rgba(255, 59, 47, 0.1);
+      color: #ff3b2f;
+      border-radius: 9999px;
+      font-weight: 700;
+      box-shadow: 0 0 15px rgba(255, 59, 47, 0.3);
+    }
+    .badge-red .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #ff3b2f;
+      box-shadow: 0 0 8px #ff3b2f;
+      animation: pulse 1.5s infinite;
+    }
+    .hero-center {
+      max-width: 680px;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 30px rgba(255, 59, 47, 0.4);
+    }
+    .hero-title span.accent {
+      color: #ff3b2f;
+    }
+    .hero-sub {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 1.5rem;
+    }
+    .hud-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.4);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1rem;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <!-- 4D Microbiology Canvas Layer -->
+  <div id="canvas-container">
+    <canvas id="bg-canvas"></canvas>
+  </div>
+
+  <!-- Transparent Content Layer over the 4D canvas -->
+  <div id="content-overlay">
+    <header class="hud-header">
+      <div>
+        <span class="badge-red"><span class="dot"></span>MICROSCOPE // 4D LENS ACTIVE</span>
+      </div>
+      <div>
+        <span>FPS: <strong id="fps-counter" style="color:#ffffff">60</strong> &bull; MAGNIFICATION: 2500X</span>
+      </div>
+    </header>
+
+    <div class="hero-center">
+      <h1 class="hero-title">
+        SINGANABOYINA <br />
+        <span class="accent">SASIKUMAR</span>
+      </h1>
+      <p class="hero-sub">
+        Full-Stack Software Engineer &amp; Machine Learning Specialist.
+        Building resilient digital ecosystems, bio-inspired algorithms, and high-performance applications.
+      </p>
+    </div>
+
+    <footer class="hud-footer">
+      <span>CELL.COLONY // 3 SPECIES: BACILLUS &bull; COCCI &bull; VIRION</span>
+      <span>SCALE: 10 µm &bull; SHALLOW DOF</span>
+      <span>PALETTE: #ff3b2f &bull; #ffffff &bull; #05060a</span>
+    </footer>
+  </div>
+
+  <script>
+    /**
+     * 4D CINEMATIC MICROBIOLOGY BACKGROUND ENGINE
+     * 
+     * Palette:
+     * - Near-black background: #05060a with radial microscope vignette
+     * - Accent glowing red: #ff3b2f
+     * - Pure white: #ffffff
+     * - Dark greys: #141722, #2a3042, #5a627a
+     * 
+     * Procedural Features:
+     * 1. 25-40 Microbes across 3 distinct procedural morphology types:
+     *    - Bacillus (Capsule/rod bacteria with translucent membrane, glowing internal nucleoids, wiggling flagella, and cell division pinching)
+     *    - Cocci clusters (spherical colony clusters joined by intercellular struts)
+     *    - Virions (3D wireframe icosahedron capsid with radiating red-glowing spike glycoproteins)
+     * 2. Multilayered Parallax:
+     *    - Far layer: out-of-focus red bokeh discs and floating nutrient dust
+     *    - Mid layer: intercellular communication network lines
+     *    - Near layer: heavily blurred foreground microbes floating right in front of camera
+     * 3. Microscope HUD Overlay:
+     *    - Circular optical lens boundary, central reticle crosshairs, perimeter tick rulers, and 10 µm scale bar
+     * 4. 4D Depth & Physics:
+     *    - 3D spatial projection with shallow depth of field (DoF)
+     *    - Mouse/touch parallax + cursor attraction (hovering near a microbe intensifies its glow and pulls nearby nutrients)
+     *    - 60 FPS capped dpr, tab visibility pause, prefers-reduced-motion support
+     */
+
+    // ==========================================
+    // TUNABLE CONSTANTS
+    // ==========================================
+    const CONFIG = {
+      BG_COLOR: '#05060a',
+      ACCENT_RED: '#ff3b2f',
+      WHITE: '#ffffff',
+      GREY_DARK: '#12141c',
+      GREY_MID: '#262c3d',
+      GREY_LIGHT: '#5e6782',
+      MICROBE_COUNT: 34,           // Total drifting microbes (25-40)
+      MAX_DPR: 2,                  // Cap devicePixelRatio for 60fps smoothness
+      CAMERA_DIST: 700,            // Camera virtual projection plane
+      FOCAL_PLANE: 0,              // Z-plane of sharp focus
+      FOCAL_DEPTH: 180,            // Range around focal plane where focus is sharp
+      PARALLAX_FACTOR: 0.04,       // Sensitivity to mouse movements
+      ATTRACTION_RADIUS: 140,      // Cursor hover attraction radius
+      BOKEH_COUNT: 16,             // Out-of-focus background bokeh discs
+      DUST_COUNT: 75,              // Floating nutrient dust particles
+    };
+
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    const fpsCounter = document.getElementById('fps-counter');
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetMouseX = 0;
+    let targetMouseY = 0;
+    let rawMouseX = -1000;
+    let rawMouseY = -1000;
+    let isTabVisible = true;
+    let frameCount = 0;
+    let fpsTime = 0;
+
+    // ==========================================
+    // 3D ICOSAHEDRON WIREFRAME GEOMETRY (Virion)
+    // ==========================================
+    const PHI = (1 + Math.sqrt(5)) / 2; // Golden ratio
+    const ICO_VERTICES = [
+      [-1, PHI, 0], [1, PHI, 0], [-1, -PHI, 0], [1, -PHI, 0],
+      [0, -1, PHI], [0, 1, PHI], [0, -1, -PHI], [0, 1, -PHI],
+      [PHI, 0, -1], [PHI, 0, 1], [-PHI, 0, -1], [-PHI, 0, 1]
+    ].map(v => {
+      const len = Math.hypot(v[0], v[1], v[2]);
+      return [v[0] / len, v[1] / len, v[2] / len];
+    });
+
+    const ICO_EDGES = [
+      [0, 11], [0, 5], [0, 1], [0, 7], [0, 10],
+      [1, 5], [1, 9], [1, 8], [1, 7],
+      [2, 11], [2, 4], [2, 3], [2, 6], [2, 10],
+      [3, 4], [3, 9], [3, 8], [3, 6],
+      [4, 5], [4, 9], [4, 11],
+      [5, 9], [5, 11],
+      [6, 7], [6, 8], [6, 10],
+      [7, 8], [7, 10],
+      [8, 9],
+      [10, 11]
+    ];
+
+    // ==========================================
+    // PROCEDURAL ENTITIES GENERATION
+    // ==========================================
+    const microbes = [];
+    const bokehDiscs = [];
+    const dustParticles = [];
+
+    // Factory: Create a Microbe
+    function createMicrobe(forceType = null, initialZ = null) {
+      const types = ['bacillus', 'cocci', 'virion'];
+      const type = forceType || types[Math.floor(Math.random() * types.length)];
+      
+      // Z depth from -350 (near/blurred) to +450 (far/blurred)
+      const z = initialZ !== null ? initialZ : (Math.random() * 800 - 350);
+
+      // Bacillus parameters
+      const length = Math.random() * 32 + 38;
+      const radius = Math.random() * 8 + 14;
+      const flagellaCount = Math.floor(Math.random() * 3) + 2;
+
+      // Cocci parameters
+      const cocciSpheres = [];
+      const numCocci = Math.floor(Math.random() * 4) + 4;
+      for (let s = 0; s < numCocci; s++) {
+        cocciSpheres.push({
+          ox: (Math.random() - 0.5) * 36,
+          oy: (Math.random() - 0.5) * 36,
+          oz: (Math.random() - 0.5) * 24,
+          r: Math.random() * 5 + 7,
+          isRed: Math.random() > 0.45,
+        });
+      }
+
+      return {
+        type,
+        x: (Math.random() - 0.5) * (width * 1.3),
+        y: (Math.random() - 0.5) * (height * 1.3),
+        z,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        vz: (Math.random() - 0.5) * 0.2,
+        rotX: Math.random() * Math.PI * 2,
+        rotY: Math.random() * Math.PI * 2,
+        rotZ: Math.random() * Math.PI * 2,
+        vRotX: (Math.random() - 0.5) * 0.015,
+        vRotY: (Math.random() - 0.5) * 0.015,
+        vRotZ: (Math.random() - 0.5) * 0.012,
+        scale: Math.random() * 0.35 + 0.85,
+        // Bacillus features
+        length,
+        radius,
+        flagellaCount,
+        flagellaPhase: Math.random() * Math.PI * 2,
+        // Cocci features
+        cocciSpheres,
+        // Virion features
+        virionRadius: Math.random() * 10 + 20,
+        spikeLength: Math.random() * 6 + 12,
+        // Cell Division State (for bacillus)
+        divisionProgress: 0,
+        isDividing: Math.random() < 0.15 && type === 'bacillus',
+        divisionSpeed: Math.random() * 0.002 + 0.001,
+        // Breathing pulse & hover
+        pulsePhase: Math.random() * Math.PI * 2,
+        hoverGlow: 0,
+      };
+    }
+
+    function initScene() {
+      // 1. Generate Microbes (including 2 very near/blurred microbes)
+      microbes.length = 0;
+      for (let i = 0; i < CONFIG.MICROBE_COUNT; i++) {
+        // Place 3 near the camera for extreme shallow depth of field
+        const initialZ = i < 3 ? (Math.random() * -120 - 240) : null;
+        microbes.push(createMicrobe(null, initialZ));
+      }
+
+      // 2. Generate Bokeh Discs
+      bokehDiscs.length = 0;
+      for (let i = 0; i < CONFIG.BOKEH_COUNT; i++) {
+        bokehDiscs.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 65 + 30,
+          alpha: Math.random() * 0.09 + 0.03,
+          speed: Math.random() * 0.001 + 0.0006,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+
+      // 3. Generate Nutrient Dust
+      dustParticles.length = 0;
+      for (let i = 0; i < CONFIG.DUST_COUNT; i++) {
+        dustParticles.push({
+          x: (Math.random() - 0.5) * (width * 1.2),
+          y: (Math.random() - 0.5) * (height * 1.2),
+          z: Math.random() * 900 - 450,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
+          isRed: Math.random() > 0.65,
+          radius: Math.random() * 1.6 + 0.6,
+          twinkle: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    // Resize Handler
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.scale(dpr, dpr);
+
+      initScene();
+      if (prefersReducedMotion) {
+        drawFrame(0);
+      }
+    }
+    window.addEventListener('resize', resize);
+
+    // Mouse & Touch Tracking
+    window.addEventListener('mousemove', (e) => {
+      rawMouseX = e.clientX;
+      rawMouseY = e.clientY;
+      targetMouseX = (e.clientX - width / 2);
+      targetMouseY = (e.clientY - height / 2);
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        rawMouseX = e.touches[0].clientX;
+        rawMouseY = e.touches[0].clientY;
+        targetMouseX = (e.touches[0].clientX - width / 2);
+        targetMouseY = (e.touches[0].clientY - height / 2);
+      }
+    }, { passive: true });
+
+    document.addEventListener('visibilitychange', () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible && !prefersReducedMotion) {
+        requestAnimationFrame(loop);
+      }
+    });
+
+    // ==========================================
+    // 3D PROJECTION & DEPTH OF FIELD
+    // ==========================================
+    function project(x, y, z) {
+      const zEff = z + CONFIG.CAMERA_DIST;
+      if (zEff <= 1) return { x: 0, y: 0, scale: 0, inView: false, zEff };
+      const scale = CONFIG.CAMERA_DIST / zEff;
+      const screenX = width / 2 + x * scale;
+      const screenY = height / 2 + y * scale;
+      return {
+        x: screenX,
+        y: screenY,
+        scale,
+        zEff,
+        inView: screenX >= -150 && screenX <= width + 150 && screenY >= -150 && screenY <= height + 150
+      };
+    }
+
+    // Calculate Shallow Depth of Field (DoF) blur & opacity falloff
+    function getDoF(z) {
+      const dist = Math.abs(z - CONFIG.FOCAL_PLANE);
+      if (dist <= CONFIG.FOCAL_DEPTH) {
+        return { blur: 0, opacity: 1.0, sharp: true, distRatio: 0 };
+      }
+      const ratio = Math.min((dist - CONFIG.FOCAL_DEPTH) / 300, 1.0);
+      return {
+        blur: ratio * 7.0, // Canvas shadow / radius spread
+        opacity: Math.max(0.28, 1.0 - ratio * 0.65),
+        sharp: false,
+        distRatio: ratio,
+      };
+    }
+
+    // 3D vector rotation
+    function rotate3D(v, rx, ry, rz) {
+      let [x, y, z] = v;
+      // Rot X
+      let y1 = y * Math.cos(rx) - z * Math.sin(rx);
+      let z1 = y * Math.sin(rx) + z * Math.cos(rx);
+      // Rot Y
+      let x2 = x * Math.cos(ry) + z1 * Math.sin(ry);
+      let z2 = -x * Math.sin(ry) + z1 * Math.cos(ry);
+      // Rot Z
+      let x3 = x2 * Math.cos(rz) - y1 * Math.sin(rz);
+      let y3 = x2 * Math.sin(rz) + y1 * Math.cos(rz);
+      return [x3, y3, z2];
+    }
+
+    // ==========================================
+    // RENDER PASSES
+    // ==========================================
+
+    // 1. Background Gradient, Microscope Circular Vignette & Lighting
+    function drawBackground() {
+      ctx.fillStyle = CONFIG.BG_COLOR;
+      ctx.fillRect(0, 0, width, height);
+
+      // Subtle dark grey gradient center
+      const centerGlow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
+      centerGlow.addColorStop(0, 'rgba(28, 33, 46, 0.25)');
+      centerGlow.addColorStop(0.6, 'rgba(10, 12, 18, 0.1)');
+      centerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = centerGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      // Extreme Microscope Lens Radial Vignette
+      const lensRadius = Math.max(width, height) * 0.65;
+      const lensVignette = ctx.createRadialGradient(width / 2, height / 2, lensRadius * 0.45, width / 2, height / 2, lensRadius);
+      lensVignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      lensVignette.addColorStop(0.7, 'rgba(5, 6, 10, 0.45)');
+      lensVignette.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+      ctx.fillStyle = lensVignette;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // 2. Far Layer: Blurred Red Bokeh Circles
+    function drawBokeh(time) {
+      ctx.save();
+      const pX = -mouseX * 0.02;
+      const pY = -mouseY * 0.02;
+
+      for (let i = 0; i < bokehDiscs.length; i++) {
+        const b = bokehDiscs[i];
+        const osc = Math.sin(time * b.speed + b.phase) * 20;
+        const x = b.x + pX + osc;
+        const y = b.y + pY - osc;
+
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, b.radius);
+        grad.addColorStop(0, `rgba(255, 59, 47, ${b.alpha * 1.5})`);
+        grad.addColorStop(0.5, `rgba(255, 59, 47, ${b.alpha * 0.5})`);
+        grad.addColorStop(1, 'rgba(255, 59, 47, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 3. Nutrient Dust Particles
+    function drawDust(time) {
+      ctx.save();
+      for (let i = 0; i < dustParticles.length; i++) {
+        const d = dustParticles[i];
+        if (!prefersReducedMotion) {
+          d.x += d.vx;
+          d.y += d.vy;
+          if (d.x < -width * 0.6) d.x = width * 0.6;
+          if (d.x > width * 0.6) d.x = -width * 0.6;
+          if (d.y < -height * 0.6) d.y = height * 0.6;
+          if (d.y > height * 0.6) d.y = -height * 0.6;
+        }
+
+        const proj = project(d.x + mouseX * 0.02, d.y + mouseY * 0.02, d.z);
+        if (!proj.inView) continue;
+
+        const dof = getDoF(d.z);
+        const r = Math.max(0.6, d.radius * proj.scale);
+        const alpha = Math.sin(time * 0.003 + d.twinkle) * 0.3 + 0.5;
+
+        ctx.fillStyle = d.isRed
+          ? `rgba(255, 59, 47, ${alpha * dof.opacity * 0.7})`
+          : `rgba(255, 255, 255, ${alpha * dof.opacity * 0.5})`;
+
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 4. Mid Layer: Intercellular Communication Network Lines
+    function drawCommunicationNetwork(projList) {
+      ctx.save();
+      const MAX_DIST = 160;
+
+      for (let i = 0; i < projList.length; i++) {
+        const m1 = projList[i];
+        if (!m1.proj.inView) continue;
+
+        for (let j = i + 1; j < projList.length; j++) {
+          const m2 = projList[j];
+          if (!m2.proj.inView) continue;
+
+          // Check 3D distance
+          const dx = m1.raw.x - m2.raw.x;
+          const dy = m1.raw.y - m2.raw.y;
+          const dz = m1.raw.z - m2.raw.z;
+          const dist3D = Math.hypot(dx, dy, dz);
+
+          if (dist3D < MAX_DIST) {
+            const alpha = (1 - dist3D / MAX_DIST) * 0.16;
+            ctx.strokeStyle = `rgba(255, 59, 47, ${alpha})`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(m1.proj.x, m1.proj.y);
+            ctx.lineTo(m2.proj.x, m2.proj.y);
+            ctx.stroke();
+
+            // Tiny moving data signal along the line
+            const tSig = (Date.now() * 0.0015 + i + j) % 1;
+            const sx = m1.proj.x + (m2.proj.x - m1.proj.x) * tSig;
+            const sy = m1.proj.y + (m2.proj.y - m1.proj.y) * tSig;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    // 5. PROCEDURAL DRAWING: TYPE 1 - BACILLUS (Rod / Capsule Bacteria)
+    function drawBacillus(m, proj, dof, time) {
+      const { x, y, scale } = proj;
+      const r = m.radius * scale;
+      const len = m.length * scale;
+      const pulse = Math.sin(time * 0.002 + m.pulsePhase) * 0.08 + 1;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(m.rotZ);
+
+      // Handle Cell Division: Pinch waist formed in middle
+      let waistRatio = 1.0;
+      if (m.isDividing) {
+        m.divisionProgress += m.divisionSpeed;
+        if (m.divisionProgress >= 1) {
+          m.divisionProgress = 0;
+          m.isDividing = false;
+        }
+        waistRatio = Math.max(0.2, 1 - Math.sin(m.divisionProgress * Math.PI) * 0.75);
+      }
+
+      // Outer Glow / Bloom
+      const glowR = r * 2.2 * pulse;
+      const glow = ctx.createRadialGradient(0, 0, r * 0.5, 0, 0, glowR);
+      const glowAlpha = (0.35 + m.hoverGlow * 0.4) * dof.opacity;
+      glow.addColorStop(0, `rgba(255, 59, 47, ${glowAlpha})`);
+      glow.addColorStop(1, 'rgba(255, 59, 47, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Translucent Capsule Membrane
+      const hLen = (len / 2) * pulse;
+      ctx.beginPath();
+      // Draw capsule with pinch at center (waistRatio)
+      ctx.moveTo(-hLen, -r);
+      ctx.bezierCurveTo(-hLen * 0.3, -r * waistRatio, hLen * 0.3, -r * waistRatio, hLen, -r);
+      ctx.arc(hLen, 0, r, -Math.PI / 2, Math.PI / 2);
+      ctx.bezierCurveTo(hLen * 0.3, r * waistRatio, -hLen * 0.3, r * waistRatio, -hLen, r);
+      ctx.arc(-hLen, 0, r, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+
+      // Capsule Fill with membrane gradient
+      const membraneGrad = ctx.createLinearGradient(-hLen, -r, hLen, r);
+      membraneGrad.addColorStop(0, `rgba(255, 255, 255, ${0.15 * dof.opacity})`);
+      membraneGrad.addColorStop(0.5, `rgba(255, 59, 47, ${(0.18 + m.hoverGlow * 0.2) * dof.opacity})`);
+      membraneGrad.addColorStop(1, `rgba(20, 24, 34, ${0.4 * dof.opacity})`);
+      ctx.fillStyle = membraneGrad;
+      ctx.fill();
+
+      // Membrane Edge Stroke
+      ctx.strokeStyle = `rgba(255, 255, 255, ${(dof.sharp ? 0.7 : 0.3) * dof.opacity})`;
+      ctx.lineWidth = Math.max(0.8, 1.4 * scale);
+      ctx.stroke();
+
+      // Internal Glowing Nucleoid Organelles (dots)
+      const numDots = 4;
+      for (let d = 0; d < numDots; d++) {
+        const dotX = ((d - (numDots - 1) / 2) / numDots) * len * 0.7;
+        const dotY = Math.sin(time * 0.003 + d) * (r * 0.3);
+        const dotR = Math.max(1.2, 2.5 * scale);
+
+        ctx.fillStyle = d % 2 === 0
+          ? `rgba(255, 59, 47, ${0.85 * dof.opacity})`
+          : `rgba(255, 255, 255, ${0.8 * dof.opacity})`;
+
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Wiggling Flagella / Cilia at poles
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.35 * dof.opacity})`;
+      ctx.lineWidth = Math.max(0.6, 1.0 * scale);
+
+      for (let f = 0; f < m.flagellaCount; f++) {
+        const pole = f % 2 === 0 ? 1 : -1;
+        const startX = pole * (hLen + r * 0.7);
+        const startY = (f - 1) * (r * 0.4);
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        const segs = 7;
+        const segLen = 6 * scale;
+
+        for (let s = 1; s <= segs; s++) {
+          const wave = Math.sin(time * 0.006 + m.flagellaPhase + s * 0.7) * (3.5 * scale);
+          const px = startX + pole * (s * segLen);
+          const py = startY + wave;
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // 6. PROCEDURAL DRAWING: TYPE 2 - COCCI CLUSTERS (Spherical Groups)
+    function drawCocci(m, proj, dof, time) {
+      const { x, y, scale } = proj;
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Connecting struts between nearby cocci in the cluster
+      ctx.strokeStyle = `rgba(90, 100, 126, ${0.35 * dof.opacity})`;
+      ctx.lineWidth = Math.max(0.7, 1.2 * scale);
+
+      for (let i = 0; i < m.cocciSpheres.length; i++) {
+        const s1 = m.cocciSpheres[i];
+        for (let j = i + 1; j < m.cocciSpheres.length; j++) {
+          const s2 = m.cocciSpheres[j];
+          const dist = Math.hypot(s1.ox - s2.ox, s1.oy - s2.oy);
+          if (dist < 40) {
+            ctx.beginPath();
+            ctx.moveTo(s1.ox * scale, s1.oy * scale);
+            ctx.lineTo(s2.ox * scale, s2.oy * scale);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw each spherical coccus
+      for (let i = 0; i < m.cocciSpheres.length; i++) {
+        const s = m.cocciSpheres[i];
+        const rotCoords = rotate3D([s.ox, s.oy, s.oz], m.rotX, m.rotY, m.rotZ);
+        const sx = rotCoords[0] * scale;
+        const sy = rotCoords[1] * scale;
+        const sr = Math.max(2, s.r * scale);
+
+        // Core glow
+        const glow = ctx.createRadialGradient(sx, sy, sr * 0.3, sx, sy, sr * 2.2);
+        if (s.isRed) {
+          glow.addColorStop(0, `rgba(255, 59, 47, ${(0.8 + m.hoverGlow * 0.3) * dof.opacity})`);
+          glow.addColorStop(1, 'rgba(255, 59, 47, 0)');
+        } else {
+          glow.addColorStop(0, `rgba(255, 255, 255, ${0.75 * dof.opacity})`);
+          glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        }
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sphere Body
+        ctx.fillStyle = s.isRed ? '#ff3b2f' : '#ffffff';
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Membrane Rim
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * dof.opacity})`;
+        ctx.lineWidth = Math.max(0.6, 1.0 * scale);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // 7. PROCEDURAL DRAWING: TYPE 3 - VIRUS-LIKE PARTICLES (Icosahedron Capsid + Glowing Spikes)
+    function drawVirion(m, proj, dof) {
+      const { x, y, scale } = proj;
+      const R = m.virionRadius * scale;
+      const spikeLen = m.spikeLength * scale;
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Rotate 3D icosahedron vertices
+      const rotatedVerts = ICO_VERTICES.map(v => {
+        const scaled = [v[0] * R, v[1] * R, v[2] * R];
+        return rotate3D(scaled, m.rotX, m.rotY, m.rotZ);
+      });
+
+      // Pass 1: Draw Wireframe Edges
+      ctx.strokeStyle = `rgba(90, 103, 130, ${0.45 * dof.opacity})`;
+      ctx.lineWidth = Math.max(0.8, 1.3 * scale);
+
+      for (let e = 0; e < ICO_EDGES.length; e++) {
+        const [i1, i2] = ICO_EDGES[e];
+        const v1 = rotatedVerts[i1];
+        const v2 = rotatedVerts[i2];
+
+        ctx.beginPath();
+        ctx.moveTo(v1[0], v1[1]);
+        ctx.lineTo(v2[0], v2[1]);
+        ctx.stroke();
+      }
+
+      // Pass 2: Draw Radiating Spikes with Glowing Red Tips
+      for (let i = 0; i < rotatedVerts.length; i++) {
+        const v = rotatedVerts[i];
+        const len = Math.hypot(v[0], v[1], v[2]);
+        const nx = v[0] / len;
+        const ny = v[1] / len;
+
+        const tipX = v[0] + nx * spikeLen;
+        const tipY = v[1] + ny * spikeLen;
+
+        // Spike stalk line
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 * dof.opacity})`;
+        ctx.lineWidth = Math.max(0.7, 1.1 * scale);
+        ctx.beginPath();
+        ctx.moveTo(v[0], v[1]);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // Glowing red bulb at tip (spike glycoprotein)
+        const tipR = Math.max(1.8, 3.2 * scale);
+        const glowR = tipR * 3.2;
+
+        const tipGlow = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, glowR);
+        tipGlow.addColorStop(0, `rgba(255, 59, 47, ${(0.85 + m.hoverGlow * 0.4) * dof.opacity})`);
+        tipGlow.addColorStop(1, 'rgba(255, 59, 47, 0)');
+        ctx.fillStyle = tipGlow;
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, glowR, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ff3b2f';
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, tipR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // 8. Microscope HUD Overlay: Circular Lens Reticle, Edge Rulers & 10 µm Scale Bar
+    function drawMicroscopeOverlay() {
+      ctx.save();
+      const cx = width / 2;
+      const cy = height / 2;
+      const minDim = Math.min(width, height);
+      const ringR = minDim * 0.43;
+
+      // Faint Circular Lens Ring
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Outer Secondary Ring
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringR + 18, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Central Reticle Crosshairs with gap
+      const crossSize = 14;
+      const gap = 6;
+      ctx.strokeStyle = 'rgba(255, 59, 47, 0.25)';
+      ctx.lineWidth = 1;
+
+      // Top & Bottom
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - crossSize);
+      ctx.lineTo(cx, cy - gap);
+      ctx.moveTo(cx, cy + gap);
+      ctx.lineTo(cx, cy + crossSize);
+      // Left & Right
+      ctx.moveTo(cx - crossSize, cy);
+      ctx.lineTo(cx - gap, cy);
+      ctx.moveTo(cx + gap, cy);
+      ctx.lineTo(cx + crossSize, cy);
+      ctx.stroke();
+
+      // 10 µm Scale Bar in Bottom Right
+      const barX = width - 140;
+      const barY = height - 45;
+      const barLen = 70;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(barX, barY);
+      ctx.lineTo(barX + barLen, barY);
+      // End ticks
+      ctx.moveTo(barX, barY - 4);
+      ctx.lineTo(barX, barY + 4);
+      ctx.moveTo(barX + barLen, barY - 4);
+      ctx.lineTo(barX + barLen, barY + 4);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '9px monospace';
+      ctx.fillText('10 µm', barX + 22, barY - 7);
+
+      // Perimeter Edge Ruler Tick Marks along left border
+      const numTicks = 16;
+      const startY = height * 0.2;
+      const endY = height * 0.8;
+      const stepY = (endY - startY) / numTicks;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+
+      for (let t = 0; t <= numTicks; t++) {
+        const ty = startY + t * stepY;
+        const tickW = t % 4 === 0 ? 12 : 6;
+        ctx.beginPath();
+        ctx.moveTo(0, ty);
+        ctx.lineTo(tickW, ty);
+        ctx.stroke();
+
+        if (t % 4 === 0) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          ctx.font = '8px monospace';
+          ctx.fillText(`+${(t * 2.5).toFixed(1)}`, tickW + 4, ty + 3);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // MAIN SIMULATION & DRAW FRAME
+    // ==========================================
+    function drawFrame(time) {
+      // Smooth mouse interpolation for parallax
+      mouseX += (targetMouseX - mouseX) * 0.06;
+      mouseY += (targetMouseY - mouseY) * 0.06;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Static base & lighting
+      drawBackground();
+      drawBokeh(time);
+      drawDust(time);
+
+      // 2. Microbes Updates & 3D Projection
+      const projList = [];
+
+      for (let i = 0; i < microbes.length; i++) {
+        const m = microbes[i];
+
+        if (!prefersReducedMotion) {
+          // Drifting motion in 3D
+          m.x += m.vx;
+          m.y += m.vy;
+          m.z += m.vz;
+
+          // 3D rotations
+          m.rotX += m.vRotX;
+          m.rotY += m.vRotY;
+          m.rotZ += m.vRotZ;
+
+          // Wrap-around bounds in 3D volume
+          const boundX = width * 0.65;
+          const boundY = height * 0.65;
+          if (m.x < -boundX) m.x = boundX;
+          if (m.x > boundX) m.x = -boundX;
+          if (m.y < -boundY) m.y = boundY;
+          if (m.y > boundY) m.y = -boundY;
+          if (m.z < -380) m.z = 450;
+          if (m.z > 450) m.z = -380;
+        }
+
+        // Apply mouse parallax to coordinates
+        const px = m.x + mouseX * CONFIG.PARALLAX_FACTOR * (1 + m.z * 0.001);
+        const py = m.y + mouseY * CONFIG.PARALLAX_FACTOR * (1 + m.z * 0.001);
+        const proj = project(px, py, m.z);
+
+        // Interactive hover: check if mouse is near microbe on screen
+        const distToMouse = Math.hypot(proj.x - rawMouseX, proj.y - rawMouseY);
+        if (distToMouse < CONFIG.ATTRACTION_RADIUS) {
+          m.hoverGlow = Math.min(1.0, m.hoverGlow + 0.08);
+          // Gently attract toward cursor
+          const angle = Math.atan2(rawMouseY - proj.y, rawMouseX - proj.x);
+          m.x += Math.cos(angle) * 0.4;
+          m.y += Math.sin(angle) * 0.4;
+        } else {
+          m.hoverGlow = Math.max(0, m.hoverGlow - 0.03);
+        }
+
+        projList.push({
+          raw: m,
+          proj,
+          zEff: proj.zEff,
+        });
+      }
+
+      // Sort by depth (painters algorithm: furthest Z first, nearest last)
+      projList.sort((a, b) => b.zEff - a.zEff);
+
+      // 3. Draw Intercellular Communication Network (Mid Layer)
+      drawCommunicationNetwork(projList);
+
+      // 4. Render Microbes with Shallow DoF
+      for (let i = 0; i < projList.length; i++) {
+        const item = projList[i];
+        if (!item.proj.inView) continue;
+
+        const dof = getDoF(item.raw.z);
+
+        if (item.raw.type === 'bacillus') {
+          drawBacillus(item.raw, item.proj, dof, time);
+        } else if (item.raw.type === 'cocci') {
+          drawCocci(item.raw, item.proj, dof, time);
+        } else {
+          drawVirion(item.raw, item.proj, dof);
+        }
+      }
+
+      // 5. Microscope Optical Overlay (HUD, reticle, scale)
+      drawMicroscopeOverlay();
+    }
+
+    // Loop
+    function loop(currentTime) {
+      if (!isTabVisible) return;
+      drawFrame(currentTime);
+
+      frameCount++;
+      if (currentTime - fpsTime >= 1000) {
+        fpsCounter.textContent = frameCount;
+        frameCount = 0;
+        fpsTime = currentTime;
+      }
+
+      if (!prefersReducedMotion) {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    // Initialize
+    resize();
+    if (!prefersReducedMotion) {
+      requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4D Sci-Fi Tech DNA Helix Background</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #05060a;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', 'Space Grotesk', -apple-system, BlinkMacSystemFont, monospace;
+    }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* Transparent overlay for portfolio or HUD content */
+    #content-overlay {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem;
+      pointer-events: auto;
+    }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .badge-red {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid rgba(255, 59, 47, 0.4);
+      background: rgba(255, 59, 47, 0.1);
+      color: #ff3b2f;
+      border-radius: 9999px;
+      font-weight: 700;
+      box-shadow: 0 0 15px rgba(255, 59, 47, 0.3);
+    }
+    .badge-red .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #ff3b2f;
+      box-shadow: 0 0 8px #ff3b2f;
+      animation: pulse 1.5s infinite;
+    }
+    .hero-center {
+      max-width: 650px;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 30px rgba(255, 59, 47, 0.35);
+    }
+    .hero-title span.accent {
+      color: #ff3b2f;
+    }
+    .hero-sub {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 1.5rem;
+    }
+    .hud-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.4);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1rem;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <!-- 4D Canvas Background Layer -->
+  <div id="canvas-container">
+    <canvas id="bg-canvas"></canvas>
+  </div>
+
+  <!-- Transparent Content Layer over the 4D canvas -->
+  <div id="content-overlay">
+    <header class="hud-header">
+      <div>
+        <span class="badge-red"><span class="dot"></span>SYS.4D // ACTIVE</span>
+      </div>
+      <div>
+        <span>FPS: <strong id="fps-counter" style="color:#ffffff">60</strong> &bull; DEPTH: SHALLOW DOF</span>
+      </div>
+    </header>
+
+    <div class="hero-center">
+      <h1 class="hero-title">
+        SINGANABOYINA <br />
+        <span class="accent">SASIKUMAR</span>
+      </h1>
+      <p class="hero-sub">
+        Full-Stack Software Engineer &amp; Machine Learning Specialist.
+        Architecting high-performance digital systems and mathematical models.
+      </p>
+    </div>
+
+    <footer class="hud-footer">
+      <span>DNA.HELIX.COORDS // DIAG_BL_TO_TR</span>
+      <span>COLOR: #ff3b2f &bull; #ffffff &bull; #05060a</span>
+      <span>PREFERS-REDUCED-MOTION: READY</span>
+    </footer>
+  </div>
+
+  <script>
+    /**
+     * 4D SCI-FI TECH BACKGROUND ENGINE
+     * Strictly styled: Deep Black (#05060a), Glowing Red (#ff3b2f), Crisp White (#ffffff), Dark Greys.
+     * Features:
+     * - Diagonal 3D/4D DNA Double Helix with glowing nodes, struts, and rungs
+     * - Top-Left drifting neural graph network
+     * - Perspective grid floor with tick rulers and telemetry data streams
+     * - Bottom-Left out-of-focus red bokeh circles & light streaks
+     * - Twinkling cosmic data particles
+     * - Mouse/touch parallax with 3D tilt
+     * - Shallow depth of field (DoF blur & size falloff based on camera Z)
+     * - Full responsive viewport + 60fps capped dpr
+     * - Respects prefers-reduced-motion
+     */
+
+    // ==========================================
+    // TUNABLE CONSTANTS & CONFIGURATION
+    // ==========================================
+    const CONFIG = {
+      BG_COLOR: '#05060a',
+      ACCENT_RED: '#ff3b2f',
+      ACCENT_RED_GLOW: 'rgba(255, 59, 47, 0.45)',
+      WHITE: '#ffffff',
+      WHITE_GLOW: 'rgba(255, 255, 255, 0.35)',
+      GREY_DARK: '#12141c',
+      GREY_MID: '#252938',
+      GREY_LIGHT: '#5a627a',
+      HELIX_PAIRS: 44,              // Number of rungs in the double helix
+      HELIX_RADIUS: 110,            // Helix cylinder radius
+      HELIX_PITCH: 38,              // Distance along axis per rung
+      HELIX_ROT_SPEED: 0.012,       // Speed of axial rotation
+      FLOAT_SPEED: 0.0016,          // Vertical oscillation speed
+      FLOAT_AMPLITUDE: 25,          // Vertical oscillation pixels
+      PARALLAX_STRENGTH: 0.035,     // Sensitivity to mouse movements
+      MAX_DPR: 2,                   // Cap devicePixelRatio for high-performance 60fps
+      FOCAL_DISTANCE: 450,          // Distance from camera where focus is crisp
+      FOCAL_RANGE: 160,             // Range around focal distance where DoF is sharp
+      NETWORK_NODES: 22,            // Network graph nodes in top-left
+      NETWORK_CONN_DIST: 140,       // Max distance to draw line between nodes
+      BOKEH_COUNT: 14,              // Red out-of-focus bokeh discs
+      STARS_COUNT: 90,              // Twinkling white & red ambient dots
+    };
+
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    const fpsCounter = document.getElementById('fps-counter');
+
+    // Accessibility check: prefers-reduced-motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Viewport dimensions & mouse coordinates
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetMouseX = 0;
+    let targetMouseY = 0;
+    let isTabVisible = true;
+    let frameTime = 0;
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fpsTime = 0;
+
+    // ==========================================
+    // SCENE ENTITIES GENERATION
+    // ==========================================
+
+    // 1. Top-Left Network Graph Nodes
+    const networkNodes = [];
+    function initNetworkNodes() {
+      networkNodes.length = 0;
+      for (let i = 0; i < CONFIG.NETWORK_NODES; i++) {
+        networkNodes.push({
+          x: Math.random() * (width * 0.45) - 30,
+          y: Math.random() * (height * 0.45) - 30,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          radius: Math.random() * 2 + 1.5,
+          color: Math.random() > 0.4 ? CONFIG.ACCENT_RED : CONFIG.WHITE,
+          pulse: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    // 2. Bottom-Left Red Bokeh Discs
+    const bokehDiscs = [];
+    function initBokehDiscs() {
+      bokehDiscs.length = 0;
+      for (let i = 0; i < CONFIG.BOKEH_COUNT; i++) {
+        bokehDiscs.push({
+          baseX: Math.random() * (width * 0.45),
+          baseY: height - Math.random() * (height * 0.45),
+          radius: Math.random() * 55 + 25,
+          opacity: Math.random() * 0.12 + 0.04,
+          speed: Math.random() * 0.001 + 0.0005,
+          driftOffset: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    // 3. Twinkling Background Stars
+    const stars = [];
+    function initStars() {
+      stars.length = 0;
+      for (let i = 0; i < CONFIG.STARS_COUNT; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 1.5 + 0.5,
+          alpha: Math.random() * 0.6 + 0.2,
+          isRed: Math.random() > 0.75,
+          twinkleSpeed: Math.random() * 0.03 + 0.01,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    // Resize Handler
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.scale(dpr, dpr);
+
+      initNetworkNodes();
+      initBokehDiscs();
+      initStars();
+
+      if (prefersReducedMotion) {
+        drawFrame(0);
+      }
+    }
+    window.addEventListener('resize', resize);
+
+    // Mouse & Touch Interaction
+    window.addEventListener('mousemove', (e) => {
+      targetMouseX = (e.clientX - width / 2);
+      targetMouseY = (e.clientY - height / 2);
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        targetMouseX = (e.touches[0].clientX - width / 2);
+        targetMouseY = (e.touches[0].clientY - height / 2);
+      }
+    }, { passive: true });
+
+    // Page Visibility Handler
+    document.addEventListener('visibilitychange', () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible && !prefersReducedMotion) {
+        lastTime = performance.now();
+        requestAnimationFrame(loop);
+      }
+    });
+
+    // ==========================================
+    // 3D / 4D PROJECTION MATH
+    // ==========================================
+    const CAMERA_DISTANCE = 850;
+
+    function project3D(x, y, z, originX, originY) {
+      const zOffset = z + CAMERA_DISTANCE;
+      if (zOffset <= 1) return { x: 0, y: 0, scale: 0, depth: zOffset, inView: false };
+      const scale = CAMERA_DISTANCE / zOffset;
+      const screenX = originX + x * scale;
+      const screenY = originY + y * scale;
+      return {
+        x: screenX,
+        y: screenY,
+        scale: scale,
+        depth: zOffset,
+        inView: screenX >= -100 && screenX <= width + 100 && screenY >= -100 && screenY <= height + 100
+      };
+    }
+
+    // Depth of field calculation: returns blur [0..1] and opacity factor
+    function getDepthOfField(depth) {
+      const distFromFocal = Math.abs(depth - CONFIG.FOCAL_DISTANCE);
+      if (distFromFocal <= CONFIG.FOCAL_RANGE) {
+        // In sharp focus
+        return { blur: 0, opacity: 1.0, sharp: true };
+      }
+      const blurFactor = Math.min((distFromFocal - CONFIG.FOCAL_RANGE) / 300, 1.0);
+      return {
+        blur: blurFactor * 4.5,
+        opacity: Math.max(0.35, 1.0 - blurFactor * 0.55),
+        sharp: false,
+      };
+    }
+
+    // ==========================================
+    // RENDER PASSES
+    // ==========================================
+
+    // 1. Background Gradient & Vignette
+    function drawBackground() {
+      // Pure black base
+      ctx.fillStyle = CONFIG.BG_COLOR;
+      ctx.fillRect(0, 0, width, height);
+
+      // Warm subtle gradient bleed from left edge
+      const leftGlow = ctx.createRadialGradient(0, height * 0.45, 0, 0, height * 0.45, width * 0.65);
+      leftGlow.addColorStop(0, 'rgba(255, 80, 50, 0.08)');
+      leftGlow.addColorStop(0.5, 'rgba(255, 59, 47, 0.02)');
+      leftGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = leftGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      // Dark grey radial vignette
+      const vignette = ctx.createRadialGradient(width * 0.5, height * 0.5, width * 0.2, width * 0.5, height * 0.5, width * 0.8);
+      vignette.addColorStop(0, 'rgba(10, 12, 18, 0)');
+      vignette.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // 2. Perspective Grid Floor with Monospace Measurements
+    function drawPerspectiveGrid(time) {
+      const horizonY = height * 0.62;
+      const floorBottom = height;
+      const gridCenterX = width * 0.5 + mouseX * 0.04;
+      const linesCount = 18;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+
+      // Vanishing point perspective lines
+      for (let i = -linesCount / 2; i <= linesCount / 2; i++) {
+        const xBottom = gridCenterX + (i * width * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(gridCenterX, horizonY);
+        ctx.lineTo(xBottom, floorBottom);
+        ctx.stroke();
+      }
+
+      // Horizontal depth grid bars with exponential distance spacing
+      const numHoriz = 10;
+      for (let j = 1; j <= numHoriz; j++) {
+        const factor = Math.pow(j / numHoriz, 2.2);
+        const y = horizonY + (floorBottom - horizonY) * factor;
+        const alpha = factor * 0.08;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+
+        // Tick marks & telemetry text along the perspective line
+        if (j % 2 === 0) {
+          ctx.fillStyle = 'rgba(255, 59, 47, 0.35)';
+          ctx.font = '8px monospace';
+          const textX = gridCenterX - 80 + (j * 15);
+          ctx.fillText(`SEQ_IDX: 0x${(j * 43).toString(16).toUpperCase()} // +${(j * 12.4).toFixed(1)}m`, textX, y - 4);
+        }
+      }
+      ctx.restore();
+    }
+
+    // 3. Top-Left Drifting Network Graph
+    function drawNetworkGraph(time) {
+      ctx.save();
+      const pX = mouseX * 0.02;
+      const pY = mouseY * 0.02;
+
+      // Update positions
+      for (let i = 0; i < networkNodes.length; i++) {
+        const n = networkNodes[i];
+        if (!prefersReducedMotion) {
+          n.x += n.vx;
+          n.y += n.vy;
+          if (n.x < -40 || n.x > width * 0.45) n.vx *= -1;
+          if (n.y < -40 || n.y > height * 0.45) n.vy *= -1;
+        }
+
+        // Connect nearby nodes
+        for (let j = i + 1; j < networkNodes.length; j++) {
+          const n2 = networkNodes[j];
+          const dx = (n.x + pX) - (n2.x + pX);
+          const dy = (n.y + pY) - (n2.y + pY);
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < CONFIG.NETWORK_CONN_DIST) {
+            const alpha = (1 - dist / CONFIG.NETWORK_CONN_DIST) * 0.15;
+            ctx.strokeStyle = `rgba(90, 98, 122, ${alpha})`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(n.x + pX, n.y + pY);
+            ctx.lineTo(n2.x + pX, n2.y + pY);
+            ctx.stroke();
+          }
+        }
+
+        // Draw node with glow
+        const pulseAlpha = Math.sin(time * 0.002 + n.pulse) * 0.2 + 0.6;
+        ctx.fillStyle = n.color === CONFIG.ACCENT_RED
+          ? `rgba(255, 59, 47, ${pulseAlpha})`
+          : `rgba(255, 255, 255, ${pulseAlpha * 0.8})`;
+
+        ctx.beginPath();
+        ctx.arc(n.x + pX, n.y + pY, n.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 4. Bottom-Left Out-Of-Focus Bokeh Circles & Red Light Streak
+    function drawBokehAndStreaks(time) {
+      ctx.save();
+      const pX = -mouseX * 0.04;
+      const pY = -mouseY * 0.04;
+
+      // Blurred Bokeh Discs
+      for (let i = 0; i < bokehDiscs.length; i++) {
+        const b = bokehDiscs[i];
+        const osc = Math.sin(time * b.speed + b.driftOffset) * 15;
+        const x = b.baseX + pX + osc;
+        const y = b.baseY + pY - osc;
+
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, b.radius);
+        grad.addColorStop(0, `rgba(255, 59, 47, ${b.opacity * 1.5})`);
+        grad.addColorStop(0.5, `rgba(255, 59, 47, ${b.opacity * 0.6})`);
+        grad.addColorStop(1, 'rgba(255, 59, 47, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Horizontal Motion-Blur Red Light Streak shooting to the right
+      const streakY = height * 0.72 + pY * 0.5;
+      const streakLength = width * 0.65;
+      const streakX = width * 0.12;
+
+      const streakGrad = ctx.createLinearGradient(streakX, streakY, streakX + streakLength, streakY);
+      streakGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+      streakGrad.addColorStop(0.1, '#ff3b2f');
+      streakGrad.addColorStop(0.4, 'rgba(255, 59, 47, 0.4)');
+      streakGrad.addColorStop(1, 'rgba(255, 59, 47, 0)');
+
+      ctx.strokeStyle = streakGrad;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#ff3b2f';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(streakX, streakY);
+      ctx.lineTo(streakX + streakLength, streakY);
+      ctx.stroke();
+
+      // Core Highlight Head of the streak
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(streakX + 6, streakY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 5. Background Twinkling Stars
+    function drawStars(time) {
+      ctx.save();
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        const twinkle = Math.sin(time * s.twinkleSpeed + s.phase) * 0.4 + 0.6;
+        const alpha = s.alpha * twinkle;
+
+        ctx.fillStyle = s.isRed
+          ? `rgba(255, 59, 47, ${alpha})`
+          : `rgba(255, 255, 255, ${alpha})`;
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 6. MAIN ELEMENT: 4D DNA Double Helix (Diagonal Bottom-Left to Top-Right)
+    function drawDNAHelix(time) {
+      ctx.save();
+
+      // Helix Placement & Diagonal Orientation
+      // Origin at bottom-left corner with diagonal rotation
+      const originX = width * 0.28 + (mouseX * CONFIG.PARALLAX_STRENGTH * 12);
+      const originY = height * 0.62 + (mouseY * CONFIG.PARALLAX_STRENGTH * 12);
+
+      // Helix tilt angle: roughly -38 deg from horizontal
+      const angle = -0.62 + (mouseY * 0.0001);
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+
+      // Axial continuous rotation
+      const rot = time * CONFIG.HELIX_ROT_SPEED;
+      const floatY = Math.sin(time * CONFIG.FLOAT_SPEED) * CONFIG.FLOAT_AMPLITUDE;
+
+      const pairs = [];
+      const totalPairs = CONFIG.HELIX_PAIRS;
+
+      for (let i = 0; i < totalPairs; i++) {
+        // Position along the longitudinal axis of the helix (-half to +half)
+        const longitudinal = (i - totalPairs / 2) * CONFIG.HELIX_PITCH;
+        const currentRot = rot + (i * 0.26);
+
+        // Strand A coords (in helix local coordinates)
+        const x1 = Math.cos(currentRot) * CONFIG.HELIX_RADIUS;
+        const z1 = Math.sin(currentRot) * CONFIG.HELIX_RADIUS;
+        const y1 = floatY;
+
+        // Strand B coords (180 deg opposite)
+        const x2 = Math.cos(currentRot + Math.PI) * CONFIG.HELIX_RADIUS;
+        const z2 = Math.sin(currentRot + Math.PI) * CONFIG.HELIX_RADIUS;
+        const y2 = floatY;
+
+        // Rotate along the diagonal axis in 3D
+        // Local axis is along vector (cosA, sinA)
+        const worldX1 = longitudinal * cosA - x1 * sinA;
+        const worldY1 = longitudinal * sinA + x1 * cosA + y1;
+        const worldZ1 = z1;
+
+        const worldX2 = longitudinal * cosA - x2 * sinA;
+        const worldY2 = longitudinal * sinA + x2 * cosA + y2;
+        const worldZ2 = z2;
+
+        // Project both nodes to 2D screen coordinates
+        const p1 = project3D(worldX1, worldY1, worldZ1, originX, originY);
+        const p2 = project3D(worldX2, worldY2, worldZ2, originX, originY);
+
+        pairs.push({
+          index: i,
+          p1,
+          p2,
+          avgDepth: (p1.depth + p2.depth) / 2,
+          colorA: i % 2 === 0 ? CONFIG.ACCENT_RED : CONFIG.WHITE,
+          colorB: i % 2 === 0 ? CONFIG.WHITE : CONFIG.ACCENT_RED,
+        });
+      }
+
+      // Sort by depth (Z-buffer painters algorithm: draw furthest first)
+      pairs.sort((a, b) => b.avgDepth - a.avgDepth);
+
+      // Pass 1: Draw Rungs and Triangulated Struts connecting adjacent nodes
+      for (let k = 0; k < pairs.length; k++) {
+        const item = pairs[k];
+        const dof = getDepthOfField(item.avgDepth);
+
+        // Draw cross rung connecting Strand A & Strand B
+        const rungGrad = ctx.createLinearGradient(item.p1.x, item.p1.y, item.p2.x, item.p2.y);
+        rungGrad.addColorStop(0, item.colorA === CONFIG.ACCENT_RED ? 'rgba(255, 59, 47, 0.7)' : 'rgba(255, 255, 255, 0.7)');
+        rungGrad.addColorStop(0.5, 'rgba(90, 98, 122, 0.35)');
+        rungGrad.addColorStop(1, item.colorB === CONFIG.ACCENT_RED ? 'rgba(255, 59, 47, 0.7)' : 'rgba(255, 255, 255, 0.7)');
+
+        ctx.strokeStyle = rungGrad;
+        ctx.lineWidth = Math.max(0.7, 1.6 * item.p1.scale);
+        ctx.beginPath();
+        ctx.moveTo(item.p1.x, item.p1.y);
+        ctx.lineTo(item.p2.x, item.p2.y);
+        ctx.stroke();
+
+        // Triangulated strut to previous pair
+        if (k > 0) {
+          const prev = pairs[k - 1];
+          ctx.strokeStyle = 'rgba(90, 98, 122, 0.18)';
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(item.p1.x, item.p1.y);
+          ctx.lineTo(prev.p2.x, prev.p2.y);
+          ctx.stroke();
+        }
+      }
+
+      // Pass 2: Draw Glowing Spherical Nodes on the Helix Strands
+      for (let k = 0; k < pairs.length; k++) {
+        const item = pairs[k];
+
+        // Draw Node 1 (Strand A)
+        drawHelixNode(item.p1, item.colorA);
+
+        // Draw Node 2 (Strand B)
+        drawHelixNode(item.p2, item.colorB);
+      }
+
+      ctx.restore();
+    }
+
+    // Helper to draw a single glowing sphere node with bloom and DoF
+    function drawHelixNode(proj, color) {
+      if (!proj.inView) return;
+
+      const dof = getDepthOfField(proj.depth);
+      const baseRadius = color === CONFIG.ACCENT_RED ? 4.8 : 3.8;
+      const radius = Math.max(1.5, baseRadius * proj.scale);
+
+      // Outer radial glow halo (bloom)
+      const glowRadius = radius * (color === CONFIG.ACCENT_RED ? 4.2 : 3.2);
+      const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, glowRadius);
+
+      if (color === CONFIG.ACCENT_RED) {
+        glow.addColorStop(0, `rgba(255, 59, 47, ${0.85 * dof.opacity})`);
+        glow.addColorStop(0.4, `rgba(255, 59, 47, ${0.35 * dof.opacity})`);
+        glow.addColorStop(1, 'rgba(255, 59, 47, 0)');
+      } else {
+        glow.addColorStop(0, `rgba(255, 255, 255, ${0.9 * dof.opacity})`);
+        glow.addColorStop(0.4, `rgba(255, 255, 255, ${0.25 * dof.opacity})`);
+        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
+
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sharp central sphere core
+      ctx.fillStyle = color === CONFIG.ACCENT_RED
+        ? (dof.sharp ? '#ff6050' : '#ff3b2f')
+        : '#ffffff';
+
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ==========================================
+    // MAIN LOOP & RAF
+    // ==========================================
+    function drawFrame(time) {
+      // Smooth mouse interpolation for 60fps parallax
+      mouseX += (targetMouseX - mouseX) * 0.08;
+      mouseY += (targetMouseY - mouseY) * 0.08;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Layered render pipeline
+      drawBackground();
+      drawStars(time);
+      drawPerspectiveGrid(time);
+      drawNetworkGraph(time);
+      drawBokehAndStreaks(time);
+      drawDNAHelix(time);
+    }
+
+    function loop(currentTime) {
+      if (!isTabVisible) return;
+
+      frameTime = currentTime;
+      drawFrame(currentTime);
+
+      // FPS Calculation
+      frameCount++;
+      if (currentTime - fpsTime >= 1000) {
+        fpsCounter.textContent = frameCount;
+        frameCount = 0;
+        fpsTime = currentTime;
+      }
+
+      if (!prefersReducedMotion) {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    // Initialize & Boot
+    resize();
+    if (!prefersReducedMotion) {
+      requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>

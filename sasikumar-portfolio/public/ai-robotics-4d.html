@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI and robotics background</title>
+<style>
+:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;background:#05060a;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;overflow:hidden;touch-action:none;background:#05060a;font-family:ui-monospace,Menlo,Consolas,monospace;color:#f4efe8}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+/* Transparent layer: put your portfolio content inside .content */
+.content{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:2.5rem}
+.hud-title{font-family:monospace;font-size:0.75rem;letter-spacing:0.2em;color:#00f0ff;text-transform:uppercase}
+.hero-box{max-width:580px;margin:auto;text-align:center;pointer-events:auto;background:rgba(5,9,17,0.7);border:1px solid rgba(60,150,255,0.3);backdrop-filter:blur(10px);padding:2rem 2.5rem;border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,0.8),0 0 25px rgba(60,150,255,0.15)}
+.hero-box h1{font-size:2rem;font-weight:800;margin-bottom:0.5rem;color:#ffffff;letter-spacing:-0.02em}
+.hero-box p{font-size:0.9rem;color:rgba(200,225,255,0.8);line-height:1.6;margin-bottom:1.5rem}
+.hero-btn{display:inline-block;padding:0.7rem 1.4rem;border-radius:8px;font-size:0.8rem;font-weight:700;text-decoration:none;background:#00f0ff;color:#000000;box-shadow:0 0 20px rgba(0,240,255,0.4);transition:all 0.2s}
+.hero-btn:hover{background:#ffffff;box-shadow:0 0 30px rgba(0,240,255,0.7);transform:translateY(-2px)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<main class="content">
+  <div class="hud-title">AI &amp; ROBOTICS // NEURAL DATA MATRIX</div>
+  <div class="hero-box">
+    <h1>SINGANABOYINA SASIKUMAR</h1>
+    <p>Full-Stack Developer &amp; Machine Learning Engineer<br>B.Tech IT (JNTUA) &bull; Technex IIT BHU Fellow</p>
+    <a href="/" class="hero-btn">Enter Portfolio</a>
+  </div>
+  <div class="hud-title" style="text-align:right">FPS: 60 &bull; DRAG TO ORBIT &bull; SCROLL TO ZOOM</div>
+</main>
+<script>
+(() => {
+// ===================== TUNABLES =====================
+const C = {
+  RED: [60, 150, 255], WHITE: [255, 255, 255],
+  SPEED: 1,          // global time multiplier
+  NET_NODES: 70,     // neural network nodes (reduced on small screens)
+  DUST: 110, BOKEH: 22,
+  CYCLE: 30,         // seconds for one idle -> processing -> idle loop
+  DOF: 0.45,         // depth-of-field strength
+  DPR_MAX: 2
+};
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const MONO = 'ui-monospace,Menlo,Consolas,monospace';
+const AC = C.RED.join(',');
+const SHOW_ROBOT = false; // set to true to bring the robot head and torso back // accent color (now blue) as an "r,g,b" string
+let W, H, dpr, F, cx, cy, small, bgGrad, vigGrad;
+let D = 9, Dt = 9; // camera distance, eases toward Dt (scroll zoom)                                   // camera distance
+const ptr = { x: 0, y: 0, tx: 0, ty: 0, active: false };
+let cY = 1, sY = 0, cP = 1, sP = 0;            // camera rotation cache
+let t = 0, I = 0, scanY = 0;
+
+// ===================== GLOW SPRITES (depth-of-field levels) =====================
+const LV = 6, SP = { r: [], w: [] };
+function mkSprite(col, lv) {
+  const s = 64, c = document.createElement('canvas'); c.width = c.height = s;
+  const g = c.getContext('2d'), r = s / 2, k = col.join(',');
+  const core = .14 + lv * .11, A = 1 / (1 + lv * .5);
+  const gr = g.createRadialGradient(r, r, 0, r, r, r);
+  gr.addColorStop(0, `rgba(${k},${A})`);
+  gr.addColorStop(core, `rgba(${k},${A * .85})`);
+  gr.addColorStop(Math.min(core + .25, .99), `rgba(${k},${A * .12})`);
+  gr.addColorStop(1, `rgba(${k},0)`);
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  return c;
+}
+for (let i = 0; i < LV; i++) { SP.r.push(mkSprite(C.RED, i)); SP.w.push(mkSprite(C.WHITE, i)); }
+const lvOf = z => Math.min(LV - 1, Math.floor(Math.abs(z - D) * C.DOF));
+function dot(x, y, rad, lv, col, a) {
+  if (a <= 0.003 || rad < .3) return;
+  ctx.globalAlpha = Math.min(a, 1);
+  ctx.drawImage(SP[col][lv], x - rad, y - rad, rad * 2, rad * 2);
+}
+
+// ===================== CAMERA =====================
+function pr(w, o) {
+  const x = w[0], y = w[1], z = w[2];
+  const x1 = x * cY + z * sY, z1 = -x * sY + z * cY;
+  const y1 = y * cP - z1 * sP, z2 = y * sP + z1 * cP;
+  const zc = Math.max(.6, D - z2), k = F / zc;
+  o.x = cx + x1 * k; o.y = cy - y1 * k; o.z = zc; o.k = k;
+}
+
+// ===================== MESHES =====================
+function mesh(v, e, o) {
+  return Object.assign({ v, e, w: v.map(() => [0, 0, 0]), q: v.map(() => ({ x: 0, y: 0, z: 0, k: 0 })),
+    p: [0, 0, 0], r: [0, 0, 0], rs: [0, 0, 0], s: 1, ns: .045 }, o);
+}
+function xf(m) {
+  const [a, b, c] = m.r, sa = Math.sin(a), ca = Math.cos(a), sb = Math.sin(b), cb = Math.cos(b), sc = Math.sin(c), cc = Math.cos(c);
+  for (let i = 0; i < m.v.length; i++) {
+    let [x, y, z] = m.v[i]; x *= m.s; y *= m.s; z *= m.s;
+    const x1 = x * cb + z * sb, z1 = -x * sb + z * cb;
+    const y1 = y * ca - z1 * sa, z2 = y * sa + z1 * ca;
+    const w = m.w[i];
+    w[0] = x1 * cc - y1 * sc + m.p[0]; w[1] = x1 * sc + y1 * cc + m.p[1]; w[2] = z2 + m.p[2];
+  }
+}
+const spow = (c, e) => (c < 0 ? -1 : 1) * Math.pow(Math.abs(c), e);
+
+// Head: boxy superellipsoid, eyes and mouth appended as extra vertices
+const head = (() => {
+  const v = [], e = [], R = 9, Q = 16, E = .55;
+  for (let i = 0; i < R; i++) {
+    const u = -1.35 + i * (2.7 / (R - 1));
+    for (let j = 0; j < Q; j++) {
+      const a = j / Q * 6.2832, n = i * Q + j;
+      v.push([spow(Math.cos(u), E) * spow(Math.cos(a), E), 1.25 * spow(Math.sin(u), E), .95 * spow(Math.cos(u), E) * spow(Math.sin(a), E)]);
+      e.push([n, i * Q + (j + 1) % Q]); if (i < R - 1) e.push([n, n + Q]);
+    }
+  }
+  const eyeL = v.length; v.push([-.4, .15, .97]); v.push([.4, .15, .97]);
+  const m0 = v.length; for (let k = 0; k < 5; k++) { v.push([-.4 + k * .2, -.5, .93]); if (k) e.push([m0 + k - 1, m0 + k]); }
+  return mesh(v, e, { eyeL, ns: .042, scan: true });
+})();
+// Neck and shoulders
+const torso = (() => {
+  const v = [], e = [], S = 9;
+  for (const y of [-1.5, -2.0]) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.2832; v.push([.5 * Math.cos(a), y, .5 * Math.sin(a)]); }
+  for (let k = 0; k < 8; k++) { e.push([k, (k + 1) % 8]); e.push([8 + k, 8 + (k + 1) % 8]); e.push([k, 8 + k]); }
+  const s0 = v.length;
+  for (let k = 0; k < S; k++) { const x = -2.4 + k * .6; v.push([x, -2.7 - x * x * .06, 0]); if (k) e.push([s0 + k - 1, s0 + k]); }
+  for (let k = 0; k < 8; k++) e.push([8 + k, s0 + Math.round((v[8 + k][0] / .5 + 1) / 2 * (S - 1))]);
+  return mesh(v, e, { ns: .04 });
+})();
+// Floating arm joints (chain of octahedra)
+function limb(n, s) {
+  const v = [], e = [], ctr = [];
+  for (let i = 0; i < n; i++) {
+    const cxp = i * .55, cyp = Math.sin(i * .9) * .25, b = v.length;
+    v.push([cxp + s, cyp, 0], [cxp - s, cyp, 0], [cxp, cyp + s, 0], [cxp, cyp - s, 0], [cxp, cyp, s], [cxp, cyp, -s]);
+    [[0, 2], [0, 3], [0, 4], [0, 5], [1, 2], [1, 3], [1, 4], [1, 5], [2, 4], [4, 3], [3, 5], [5, 2]].forEach(p => e.push([b + p[0], b + p[1]]));
+    ctr.push(b);
+    if (i) e.push([ctr[i - 1], ctr[i]]);
+  }
+  return mesh(v, e, { ns: .05 });
+}
+const limbs = [[-4.2, .8, 1.5], [4.5, -.6, 2.4], [-3.2, -1.8, -2.5], [3.8, 1.8, -3.2]].map((b, i) => {
+  const m = limb(5, .17); m.base = b; m.k = i; m.rs = [rnd(-.3, .3), rnd(.15, .35) * (i % 2 ? 1 : -1), rnd(-.2, .2)]; return m;
+});
+
+// ===================== NEURAL NETWORK =====================
+let nodes = [], edges = [], pulses = [], rewireT = 0, netA = 0;
+function initNet(n) {
+  nodes = []; edges = []; pulses = [];
+  for (let i = 0; i < n; i++) {
+    const r = rnd(3.2, 7.5), a = rnd(0, 6.283), y = rnd(-4.5, 4.5);
+    nodes.push({ p: [Math.cos(a) * r, y, Math.sin(a) * r * .8], w: [0, 0, 0], q: { x: 0, y: 0, z: 0, k: 0 }, b: 0, f: rnd(0, 6.28) });
+  }
+  nodes.forEach((a, i) => nearest(i, 2).forEach(j => edges.push({ a: i, b: j })));
+  if (SHOW_ROBOT) for (let k = 0; k < 7; k++) edges.push({ a: (Math.random() * n) | 0, b: (Math.random() * 144) | 0, h: 1 }); // links to the head
+}
+function nearest(i, k) {
+  const a = nodes[i].p;
+  return nodes.map((n, j) => ({ j, d: j === i ? 1e9 : (n.p[0] - a[0]) ** 2 + (n.p[1] - a[1]) ** 2 + (n.p[2] - a[2]) ** 2 }))
+    .sort((x, y) => x.d - y.d).slice(0, k).map(o => o.j);
+}
+
+// ===================== BACKGROUND DATA =====================
+let bokeh = [], dust = [], gears = [], traces = [];
+const LINES = ['model.train()', 'loss: 0.0231', 'tokens: 4096', 'epoch 42/100', 'grad_norm: 0.87', 'lr: 3e-4', 'actuator[7]: ok', 'servo.sync()', 'attention: 12 heads', 'infer: 18 ms'];
+const texts = LINES.map(s => ({ s, x: rnd(.04, .9), y: rnd(.1, .9), v: rnd(.002, .006), z: rnd(.4, 1) }));
+function initBg() {
+  bokeh = Array.from({ length: small ? 12 : C.BOKEH }, () => ({ x: Math.random(), y: Math.random(), r: rnd(.03, .12), a: rnd(.05, .17), f: rnd(.2, 1), v: rnd(.0004, .0015) }));
+  dust = Array.from({ length: small ? C.DUST / 2 : C.DUST }, () => ({ x: Math.random(), y: Math.random(), r: rnd(.4, 1.6), a: rnd(.2, .7), f: rnd(.1, 1), v: rnd(.0006, .003), ph: rnd(0, 6.28) }));
+  traces = Array.from({ length: 7 }, () => {
+    let x = rnd(.05, .95), y = rnd(.1, .9); const pts = [[x, y]];
+    for (let i = 0; i < 4; i++) { if (i % 2) y += rnd(-.12, .12); else x += rnd(-.14, .14); pts.push([x, y]); }
+    return pts;
+  });
+}
+function mkGear(r, teeth, blur) {
+  const pad = r * .6 + blur * 3, s = Math.ceil(2 * (r + pad)), c = document.createElement('canvas'); c.width = c.height = s;
+  const g = c.getContext('2d'); g.filter = `blur(${blur}px)`; g.translate(s / 2, s / 2);
+  g.strokeStyle = 'rgb(60,150,255)'; g.lineWidth = r * .1; g.beginPath();
+  for (let i = 0; i <= teeth * 4; i++) {
+    const a = i / (teeth * 4) * 6.2832, rr = (i % 4 < 2) ? r : r * .84; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  g.stroke(); g.beginPath(); g.arc(0, 0, r * .35, 0, 6.2832); g.stroke();
+  return c;
+}
+
+// ===================== LAYOUT =====================
+function layout() {
+  dpr = Math.min(devicePixelRatio || 1, C.DPR_MAX);
+  W = cv.width = Math.round(innerWidth * dpr); H = cv.height = Math.round(innerHeight * dpr);
+  small = innerWidth < 768; F = Math.min(W, H * .6) * 1.6; cx = W / 2; cy = H * .46;
+  bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(W, H) * .6);
+  bgGrad.addColorStop(0, '#0f1a2b'); bgGrad.addColorStop(.55, '#070b14'); bgGrad.addColorStop(1, '#05060a');
+  vigGrad = ctx.createRadialGradient(cx, cy, Math.min(W, H) * .35, cx, cy, Math.hypot(W, H) * .62);
+  vigGrad.addColorStop(0, 'rgba(0,0,0,0)'); vigGrad.addColorStop(1, 'rgba(0,0,0,.78)');
+  const m = Math.min(W, H);
+  gears = [[.04, .9, .17, 11, 9], [.97, .1, .12, 9, 12], [.93, .74, .08, 8, 7]].map(g => ({ x: g[0], y: g[1], img: mkGear(m * g[2], g[3], g[4] * dpr), rot: rnd(0, 6), sp: rnd(.04, .09) * (g[0] > .5 ? -1 : 1) }));
+}
+
+// ===================== MESH / NETWORK DRAW =====================
+function neuronPath(x, y, rad, seed, full) {
+  const nb = full ? 6 : 4, L = rad * (full ? 1.6 : 1.25);
+  for (let b = 0; b < nb; b++) {
+    const ang = seed * 6.283 + b * 6.283 / nb + Math.sin(t * .8 + seed * 9 + b) * .28, len = L * (.65 + .35 * ((seed * 13.7 + b * .37) % 1));
+    const c = Math.cos(ang), s = Math.sin(ang), bend = Math.sin(seed * 20 + b * 2) * .35 * len;
+    const ex = x + c * len, ey = y + s * len;
+    ctx.moveTo(x, y); ctx.quadraticCurveTo(x + c * len * .5 - s * bend, y + s * len * .5 + c * bend, ex, ey);
+    if (full) { const f = len * .35; for (const d of [-.55, .55]) { ctx.moveTo(ex, ey); ctx.lineTo(ex + Math.cos(ang + d) * f, ey + Math.sin(ang + d) * f); } }
+  }
+}
+function drawMesh(m, aMul) {
+  xf(m); let zs = 0; const n = m.v.length;
+  for (let i = 0; i < n; i++) { pr(m.w[i], m.q[i]); zs += m.q[i].z; }
+  const lvm = lvOf(zs / n);
+  ctx.globalAlpha = 1; ctx.lineWidth = dpr * (.8 + lvm * .5);
+  ctx.strokeStyle = `rgba(235,235,240,${(.3 * aMul / (1 + lvm * .5)).toFixed(3)})`; ctx.beginPath();
+  for (const [a, b] of m.e) { ctx.moveTo(m.q[a].x, m.q[a].y); ctx.lineTo(m.q[b].x, m.q[b].y); }
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(${AC},${(.6 * aMul / (1 + lvm * .4)).toFixed(3)})`; ctx.lineWidth = dpr * (.8 + lvm * .35); ctx.beginPath();
+  for (let i = 0; i < n; i++) { const q = m.q[i]; neuronPath(q.x, q.y, m.ns * q.k * 3.2, (i * .137) % 1, false); }
+  ctx.stroke();
+  for (let i = 0; i < n; i++) {
+    const q = m.q[i], lv = lvOf(q.z), rad = m.ns * q.k * 3.2;
+    const a = (.7 + .3 * Math.sin(t * 3 + i)) * aMul / (1 + lv * .3);
+    dot(q.x, q.y, rad * .55, lv, i % 3 === 0 ? 'w' : 'r', a * (.8 + .4 * I));
+    if (m.scan && Math.abs(m.w[i][1] - scanY) < .22) dot(q.x, q.y, rad, lv, 'w', .9);
+  }
+}
+let ripples = [];
+function drawNet(dt, now) {
+  netA += dt * .05; const ca = Math.cos(netA), sa = Math.sin(netA);
+  nodes.forEach(n => { n.w[0] = n.p[0] * ca + n.p[2] * sa; n.w[1] = n.p[1] + Math.sin(t * .4 + n.f) * .15; n.w[2] = -n.p[0] * sa + n.p[2] * ca; pr(n.w, n.q); n.b *= .94;
+    { const dx = mouse.x - n.q.x, dy = mouse.y - n.q.y, d = Math.hypot(dx, dy) / (200 * dpr); if (d < 1) { n.q.x += dx * (1 - d) * .12; n.q.y += dy * (1 - d) * .12; } } });
+  rewireT -= dt;
+  if (rewireT < 0) {
+    rewireT = .5 - .3 * I;
+    const e = edges[(Math.random() * (edges.length - (SHOW_ROBOT ? 7 : 0))) | 0], a = (Math.random() * nodes.length) | 0;
+    e.a = a; e.b = nearest(a, 4)[(Math.random() * 4) | 0];
+  }
+  if (pulses.length < 70 && Math.random() < dt * (3 + 14 * I)) pulses.push({ e: edges[(Math.random() * edges.length) | 0], t: 0, s: rnd(.4, .9) });
+  ctx.lineWidth = dpr;
+  for (const e of edges) {
+    const A = nodes[e.a].q, B = e.h ? head.q[e.b] : nodes[e.b].q, lv = lvOf((A.z + B.z) / 2);
+    ctx.strokeStyle = e.h ? `rgba(60,150,255,${(.32 + .2 * I).toFixed(2)})` : `rgba(190,190,200,${((.14 + .1 * I) / (1 + lv * .4)).toFixed(3)})`;
+    ctx.globalAlpha = 1; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+  }
+  for (let i = pulses.length - 1; i >= 0; i--) {
+    const p = pulses[i], e = p.e, A = nodes[e.a].q, B = e.h ? head.q[e.b] : nodes[e.b].q;
+    p.t += dt * p.s * (.6 + 1.6 * I);
+    if (p.t >= 1) { nodes[e.a].b = 1; pulses.splice(i, 1); continue; }
+    const x = A.x + (B.x - A.x) * p.t, y = A.y + (B.y - A.y) * p.t, z = A.z + (B.z - A.z) * p.t, lv = lvOf(z);
+    dot(x, y, .08 * F / z * 3, lv, 'w', .9);
+  }
+  for (const n of nodes) {
+    const q = n.q, lv = lvOf(q.z); let b = n.b;
+    const pd = Math.hypot(q.x - mouse.x, q.y - mouse.y) / (160 * dpr); if (pd < 1) { b += (1 - pd) * .9; if (Math.random() < .03) n.b = 1; }
+    for (const r of ripples) { const d = Math.hypot(q.x - r.x, q.y - r.y), rr = (now - r.t) * .9 * dpr; b += Math.max(0, 1 - Math.abs(d - rr) / (70 * dpr)) * Math.max(0, 1 - (now - r.t) / 2200); }
+    const fl = .55 + .45 * Math.sin(t * 2 + n.f);
+    ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(${AC},${(fl * (.65 + .35 * I) / (1 + lv * .4)).toFixed(3)})`; ctx.lineWidth = dpr * (.8 + lv * .5);
+    ctx.beginPath(); neuronPath(q.x, q.y, .1 * q.k * 3.2, n.f % 1, true); ctx.stroke();
+    dot(q.x, q.y, .06 * q.k * 3.2, lv, 'r', fl * (.8 + .5 * I) / (1 + lv * .3));
+    dot(q.x, q.y, .025 * q.k * 3.2, lv, 'w', .6 * fl);
+    if (b > .05) dot(q.x, q.y, (.1 + b * .1) * q.k * 3.2, lv, 'w', Math.min(b, 1));
+  }
+}
+
+// ===================== BACKGROUND LAYERS =====================
+function drawFar(px, py) {
+  for (const b of bokeh) {
+    b.y -= b.v; if (b.y < -.15) b.y = 1.15;
+    dot(b.x * W + px * b.f * 40 * dpr, b.y * H + py * b.f * 30 * dpr, b.r * Math.min(W, H), 5, 'r', b.a * (.7 + .6 * I));
+  }
+  for (const d of dust) {
+    d.y -= d.v; if (d.y < 0) d.y = 1;
+    dot(d.x * W + px * d.f * 30 * dpr, d.y * H, d.r * dpr * 3, 0, 'w', d.a * (.6 + .4 * Math.sin(t * 2 + d.ph)));
+  }
+}
+function drawMid(px, py) {
+  ctx.globalAlpha = 1; ctx.lineWidth = dpr;
+  const hy = cy + H * .2 + py * 10 * dpr, vx = W / 2 - px * W * .04;
+  for (let k = -12; k <= 12; k++) { ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.beginPath(); ctx.moveTo(vx, hy); ctx.lineTo(vx + k * W * .16, H); ctx.stroke(); }
+  for (let j = 0; j < 15; j++) {
+    const f = (j + (t * .35) % 1) / 15, y = hy + (H - hy) * Math.pow(f, 2.2);
+    ctx.strokeStyle = `rgba(255,255,255,${(.04 + .12 * f).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  traces.forEach((tr, i) => {
+    ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.beginPath();
+    tr.forEach((p, k) => { const x = p[0] * W + px * 18 * dpr, y = p[1] * H; k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+    const e = tr[tr.length - 1]; dot(e[0] * W + px * 18 * dpr, e[1] * H, 7 * dpr, 1, 'r', .5 + .3 * Math.sin(t * 2 + i));
+    const u = ((t * .25 + i * .31) % 1) * (tr.length - 1), s = Math.floor(u), f = u - s, a = tr[s], b = tr[s + 1];
+    dot((a[0] + (b[0] - a[0]) * f) * W + px * 18 * dpr, (a[1] + (b[1] - a[1]) * f) * H, 6 * dpr, 1, 'w', .7);
+  });
+  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.beginPath();
+  const off = (t * 8 * dpr) % (12 * dpr);
+  for (let y = -off; y < H; y += 12 * dpr) { const long = Math.round((y + off) / (12 * dpr)) % 5 === 0; ctx.moveTo(0, y); ctx.lineTo((long ? 14 : 7) * dpr, y); }
+  for (let x = 0; x < W; x += 12 * dpr) { const long = Math.round(x / (12 * dpr)) % 5 === 0; ctx.moveTo(x, H); ctx.lineTo(x, H - (long ? 14 : 7) * dpr); }
+  ctx.stroke();
+  ctx.save(); try { ctx.filter = `blur(${.6 * dpr}px)`; } catch (e) {}
+  ctx.font = `${Math.round(10 * dpr)}px ${MONO}`; ctx.fillStyle = 'rgba(255,255,255,.3)';
+  const loss = (.0231 + .01 * Math.sin(t * .7) * (1 - I * .6)).toFixed(4), tok = Math.floor(4096 * (.5 + .5 * I));
+  texts.forEach(o => {
+    o.y -= o.v * .1; if (o.y < .05) o.y = .95;
+    const s = o.s.startsWith('loss') ? 'loss: ' + loss : o.s.startsWith('tokens') ? 'tokens: ' + tok : o.s;
+    ctx.globalAlpha = .5 * o.z + .3 * I; ctx.fillText(s, o.x * W + px * 25 * o.z * dpr, o.y * H);
+  });
+  ctx.restore();
+}
+function drawGears(px, py) {
+  gears.forEach(g => {
+    g.rot += g.sp * .016 * C.SPEED; ctx.save();
+    ctx.translate(g.x * W + px * 50 * dpr, g.y * H + py * 40 * dpr); ctx.rotate(g.rot);
+    ctx.globalAlpha = .38 + .25 * I; ctx.drawImage(g.img, -g.img.width / 2, -g.img.height / 2); ctx.restore();
+  });
+}
+function drawHud() {
+  const m = Math.max(14 * dpr, W * .03), L = 22 * dpr; ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(60,150,255,.75)'; ctx.lineWidth = 1.5 * dpr; ctx.beginPath();
+  [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([x, y, sx, sy]) => { ctx.moveTo(x + L * sx, y); ctx.lineTo(x, y); ctx.lineTo(x, y + L * sy); });
+  ctx.stroke();
+  const rx = W - m - 56 * dpr, ry = m + 70 * dpr, rr = 40 * dpr;
+  ctx.lineWidth = dpr; ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(rx, ry, rr, 0, 6.283); ctx.stroke();
+  ctx.setLineDash([3 * dpr, 5 * dpr]); ctx.beginPath(); ctx.arc(rx, ry, rr * .7, t * .8, t * .8 + 5); ctx.stroke(); ctx.setLineDash([]);
+  const sw = t * (1.2 + I); ctx.strokeStyle = 'rgba(60,150,255,.9)'; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + Math.cos(sw) * rr, ry + Math.sin(sw) * rr); ctx.stroke();
+  for (let k = 1; k < 8; k++) { ctx.strokeStyle = `rgba(60,150,255,${.1 * (8 - k) / 8})`; ctx.beginPath(); ctx.arc(rx, ry, rr, sw - k * .08, sw - (k - 1) * .08); ctx.stroke(); }
+  ctx.font = `${Math.round(10 * dpr)}px ${MONO}`; ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.fillText(I > .5 ? 'state: processing' : 'state: idle', rx - rr, ry + rr + 16 * dpr);
+  const bars = [['vision', .3 + .65 * I], ['language', .5 + .4 * Math.pow(Math.sin(t * .6), 2)], ['motor', (t * .08) % 1]];
+  bars.forEach((b, i) => {
+    const y = H - m - 14 * dpr - (2 - i) * 20 * dpr, w = 90 * dpr, x = m + 8 * dpr;
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillText(b[0], x, y - 5 * dpr);
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x, y, w, 3 * dpr);
+    ctx.fillStyle = 'rgba(60,150,255,.95)'; ctx.fillRect(x, y, w * b[1], 3 * dpr);
+  });
+}
+
+// ===================== AI CHIP (Circuit board) =====================
+let chipT = [], chipP = [];
+function initChip() {
+  chipT = []; chipP = []; const N = 18; let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let side = 0; side < 4; side++) for (let i = 0; i < N; i++) {
+    const u = (i + .5) / N * 2 - 1, a = side * Math.PI / 2, nx = Math.cos(a), ny = Math.sin(a), tx = -ny, ty = nx;
+    const p0 = [nx + tx * u * .9, ny + ty * u * .9], l1 = .25 + R() * .9, dg = R() * .7 * (R() < .5 ? -1 : 1), l2 = .3 + R() * 1.2;
+    const p1 = [p0[0] + nx * l1, p0[1] + ny * l1], p2 = [p1[0] + nx * Math.abs(dg) + tx * dg, p1[1] + ny * Math.abs(dg) + ty * dg];
+    chipT.push({ pts: [p0, p1, p2, [p2[0] + nx * l2, p2[1] + ny * l2]], ph: R(), side, u });
+  }
+  for (let i = 0; i < 40; i++) { const a = R() * 6.283, r = 1.5 + R() * 2.2; chipP.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, w: .06 + R() * .1, h: .03 + R() * .05, rot: R() < .5 ? 0 : 1.5708 }); }
+}
+function rr(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+function drawChip(px, py) {
+  const s = Math.min(W, H) * (small ? .15 : .17), rot = Math.sin(t * .05) * .05;
+  ctx.save(); ctx.translate(cx + px * 22 * dpr, cy + H * .05 + py * 16 * dpr); ctx.rotate(rot);
+  ctx.globalAlpha = 1; ctx.lineWidth = dpr;
+  for (let k = 1; k <= 3; k++) { ctx.strokeStyle = `rgba(${AC},${(.1 / k).toFixed(3)})`; const o = s * (1 + k * .95); rr(-o, -o, o * 2, o * 2, s * .2 * k); ctx.stroke(); }
+  ctx.strokeStyle = `rgba(${AC},${(.22 + .15 * I).toFixed(2)})`; ctx.lineWidth = 1.2 * dpr; ctx.beginPath();
+  for (const tr of chipT) tr.pts.forEach((p, k) => k ? ctx.lineTo(p[0] * s, p[1] * s) : ctx.moveTo(p[0] * s, p[1] * s));
+  ctx.stroke(); ctx.lineWidth = dpr; ctx.beginPath();
+  for (const tr of chipT) { const e = tr.pts[3]; ctx.moveTo(e[0] * s + .05 * s, e[1] * s); ctx.arc(e[0] * s, e[1] * s, .05 * s, 0, 6.283); }
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(${AC},.2)`; for (const c of chipP) { ctx.save(); ctx.translate(c.x * s, c.y * s); ctx.rotate(c.rot); ctx.strokeRect(-c.w * s, -c.h * s, c.w * s * 2, c.h * s * 2); ctx.restore(); }
+  for (const tr of chipT) {
+    const u = ((t * .3 * (.7 + I) + tr.ph) % 1) * 3, sg = Math.floor(u), f = u - sg, a = tr.pts[sg], b = tr.pts[sg + 1];
+    dot((a[0] + (b[0] - a[0]) * f) * s, (a[1] + (b[1] - a[1]) * f) * s, .09 * s, 1, 'w', .75);
+  }
+  ctx.fillStyle = 'rgba(200,225,255,.55)';
+  for (const tr of chipT) { const a = tr.side * Math.PI / 2; ctx.save(); ctx.translate(tr.pts[0][0] * s, tr.pts[0][1] * s); ctx.rotate(a); ctx.fillRect(0, -.02 * s, .14 * s, .04 * s); ctx.restore(); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(5,9,17,.94)'; rr(-s, -s, s * 2, s * 2, s * .08); ctx.fill();
+  ctx.strokeStyle = 'rgba(170,210,255,.45)'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+  ctx.strokeStyle = `rgba(${AC},.5)`; ctx.lineWidth = dpr; rr(-s * .78, -s * .78, s * 1.56, s * 1.56, s * .05); ctx.stroke();
+  const n = 8, cs = s * 1.1 / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const a = (.1 + .5 * (.5 + .5 * Math.sin(t * (1.5 + 2 * I) + i * 1.7 + j * 2.3))) * (.6 + .6 * I);
+    ctx.fillStyle = `rgba(${AC},${a.toFixed(3)})`; ctx.fillRect(-s * .55 + i * cs + cs * .08, -s * .55 + j * cs + cs * .08, cs * .84, cs * .84);
+  }
+  ctx.beginPath(); ctx.arc(-s * .88, -s * .88, s * .035, 0, 6.283); ctx.fillStyle = 'rgba(220,240,255,.8)'; ctx.fill();
+  ctx.globalCompositeOperation = 'lighter';
+  dot(0, 0, s * 1.9, 5, 'r', .3 + .22 * I);
+  ctx.globalAlpha = 1; ctx.font = `bold ${Math.round(s * .5)}px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = `rgb(${AC})`; ctx.shadowBlur = 18 * dpr; ctx.fillStyle = 'rgba(225,242,255,.92)'; ctx.fillText('AI', 0, 0);
+  ctx.shadowBlur = 0; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'; ctx.restore();
+}
+
+// ===================== DNA HELIX + DATA SCALES =====================
+const dnaA = [], dnaB = [];
+function drawDNA() {
+  const N = small ? 46 : 64;
+  for (let i = 0; i <= N; i++) {
+    if (!dnaA[i]) { dnaA[i] = { x: 0, y: 0, z: 0, k: 0 }; dnaB[i] = { x: 0, y: 0, z: 0, k: 0 }; }
+    const s = i / N * 2 - 1, ax = (small ? 2.9 : 5.9) + Math.sin(s * 2.4) * .9, ay = -s * 4.6 + Math.sin(t * .5) * .15, az = Math.cos(s * 1.4) * -1.2;
+    const dx = Math.cos(s * 2.4) * 2.16, dy = -4.6, l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l;
+    const th = s * 13 + t * .7, R = .8, c = Math.cos(th) * R, sn = Math.sin(th) * R;
+    pr([ax + nx * c, ay + ny * c, az + sn], dnaA[i]); pr([ax - nx * c, ay - ny * c, az - sn], dnaB[i]);
+  }
+  let zs = 0; for (let i = 0; i <= N; i++) zs += dnaA[i].z; const lvm = lvOf(zs / (N + 1));
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.lineWidth = dpr * (.8 + lvm * .4);
+  ctx.strokeStyle = `rgba(${AC},${((.5 + .2 * I) / (1 + lvm * .3)).toFixed(2)})`; ctx.beginPath();
+  for (let i = 0; i <= N; i++) { ctx.moveTo(dnaA[i].x, dnaA[i].y); ctx.lineTo(dnaB[i].x, dnaB[i].y); if (i < N) { ctx.moveTo(dnaA[i].x, dnaA[i].y); ctx.lineTo(dnaB[i + 1].x, dnaB[i + 1].y); ctx.moveTo(dnaB[i].x, dnaB[i].y); ctx.lineTo(dnaA[i + 1].x, dnaA[i + 1].y); } }
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(235,240,250,${(.4 / (1 + lvm * .3)).toFixed(2)})`; ctx.beginPath();
+  for (let i = 0; i < N; i++) { ctx.moveTo(dnaA[i].x, dnaA[i].y); ctx.lineTo(dnaA[i + 1].x, dnaA[i + 1].y); ctx.moveTo(dnaB[i].x, dnaB[i].y); ctx.lineTo(dnaB[i + 1].x, dnaB[i + 1].y); }
+  ctx.stroke();
+  const fl = Math.floor((t * 9 * (.7 + I)) % N);
+  for (let i = 0; i <= N; i++) for (const q of [dnaA[i], dnaB[i]]) {
+    const lv = lvOf(q.z), rad = .055 * q.k * 3.2;
+    dot(q.x, q.y, rad, lv, (i + (q === dnaB[i] ? 1 : 0)) % 2 ? 'w' : 'r', .9 / (1 + lv * .3));
+    if (Math.abs(i - fl) < 2) dot(q.x, q.y, rad * 1.8, lv, 'w', .8);
+  }
+}
+function drawScales(px, py) {
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1;
+  ctx.font = `${Math.round(8 * dpr)}px ${MONO}`; ctx.fillStyle = 'rgba(255,255,255,.3)';
+  [[.0, .66, -.5, 1.0], [.1, .8, -.5, .85], [.5, .22, -.62, .8], [.6, .1, -.62, .7]].forEach((sc, n) => {
+    ctx.save(); ctx.translate(sc[0] * W + px * (14 + n * 5) * dpr, sc[1] * H + py * 10 * dpr); ctx.rotate(sc[2]);
+    const sp = 6 * dpr, off = (t * 12 * dpr) % (sp * 10); ctx.strokeStyle = `rgba(235,240,250,${n % 2 ? .22 : .34})`; ctx.lineWidth = dpr; ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(sc[3] * W, 0);
+    for (let k = 0; k * sp < sc[3] * W; k++) { const x = k * sp - off + sp * 10; if (x < 0 || x > sc[3] * W) continue; const kk = Math.round((x) / sp); ctx.moveTo(x, 0); ctx.lineTo(x, (kk % 10 === 0 ? 18 : kk % 5 === 0 ? 11 : 6) * dpr); }
+    ctx.stroke();
+    for (let k = 0; k < 6; k++) { const x = ((k * sp * 10 - off + sp * 100) % (sc[3] * W)); ctx.fillText(String(100 + Math.round(x / sp) * 5), x, 28 * dpr); }
+    ctx.restore();
+  });
+  ctx.save(); ctx.lineCap = 'round'; ctx.shadowColor = `rgba(${AC},.9)`; ctx.shadowBlur = 24 * dpr;
+  for (let k = 0; k < 5; k++) {
+    const y1 = H * (.87 + k * .022), x2 = W * (.22 + k * .03); ctx.strokeStyle = `rgba(${AC},${(.2 + .12 * I).toFixed(2)})`; ctx.lineWidth = (9 + k * 3) * dpr;
+    ctx.beginPath(); ctx.moveTo(-W * .02, y1); ctx.lineTo(x2, y1 - H * .1); ctx.stroke();
+  }
+  ctx.restore();
+  [[.64, .56], [.08, .36], [.78, .86]].forEach((p, n) => {
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) { const a = .1 + .35 * (.5 + .5 * Math.sin(t * 2 + i * 1.3 + j * 2.1 + n)); ctx.fillStyle = `rgba(235,240,250,${a.toFixed(2)})`; ctx.fillRect(p[0] * W + i * 9 * dpr, p[1] * H + j * 9 * dpr, 4 * dpr, 4 * dpr); }
+  });
+}
+
+// ===================== EXTRA ANIMATION + CURSOR EFFECTS =====================
+const comets = [];
+function drawFX(now) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1;
+  const rx = cx + ptr.x * 22 * dpr, ry = cy + H * .05;
+  for (let k = 0; k < 3; k++) {
+    const ph = (t * (.12 + .1 * I) + k / 3) % 1;
+    ctx.strokeStyle = `rgba(${AC},${((1 - ph) * (.14 + .12 * I)).toFixed(3)})`; ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.arc(rx, ry, ph * Math.max(W, H) * .7, 0, 6.283); ctx.stroke();
+  }
+  if (Math.random() < .012 + .02 * I) comets.push({ x: rnd(0, W), y: rnd(0, H * .5), a: rnd(.3, .7), l: 0, v: rnd(900, 1500) * dpr });
+  for (let i = comets.length - 1; i >= 0; i--) {
+    const c = comets[i]; c.l += c.v * .016; const ca = Math.cos(c.a), sa = Math.sin(c.a), hx = c.x + ca * c.l, hy2 = c.y + sa * c.l, tl = 130 * dpr;
+    const g = ctx.createLinearGradient(hx - ca * tl, hy2 - sa * tl, hx, hy2); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(${AC},.9)`);
+    ctx.strokeStyle = g; ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(hx - ca * tl, hy2 - sa * tl); ctx.lineTo(hx, hy2); ctx.stroke(); dot(hx, hy2, 9 * dpr, 1, 'w', .9);
+    if (c.l > Math.hypot(W, H)) comets.splice(i, 1);
+  }
+  for (let i = trail.length - 1; i >= 0; i--) { const p = trail[i]; p.a *= mouse.down ? .95 : .9; if (p.a < .05) { trail.splice(i, 1); continue; } dot(p.x, p.y, (3 + p.a * 12) * dpr, 1, 'r', p.a * .7); }
+  if (mouse.x > -1e3) { dot(mouse.x, mouse.y, (mouse.down ? 70 : 46) * dpr, 4, 'r', .3 + .25 * I); dot(mouse.x, mouse.y, 5 * dpr, 0, 'w', .9); }
+  ctx.restore();
+}
+
+// ===================== MAIN RENDER =====================
+function render(dt, now) {
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
+  ptr.x += (ptr.tx - ptr.x) * Math.min(1, dt * 3); ptr.y += (ptr.ty - ptr.y) * Math.min(1, dt * 3);
+  const ex = ptr.x + (ptr.active ? 0 : Math.sin(t * .13) * .25), ey = ptr.y + (ptr.active ? 0 : Math.cos(t * .1) * .12);
+  const raw = .5 - .5 * Math.cos(t * 6.2832 / C.CYCLE); I = Math.min(1, raw * raw * (3 - 2 * raw) + surge + (mouse.down ? .5 : 0));
+  D += (Dt - D) * Math.min(1, dt * 4); surge *= .985; if (!mouse.down) { orbX *= .993; orbY *= .993; }
+  const yaw = ex * .3 + Math.sin(t * .1) * .08 + orbX, pit = -ey * .12 + orbY;
+  cY = Math.cos(yaw); sY = Math.sin(yaw); cP = Math.cos(pit); sP = Math.sin(pit);
+  scanY = Math.sin(t * .9) * 1.6 + .3;
+  ctx.globalCompositeOperation = 'lighter';
+  drawFar(ex, ey); drawMid(ex, ey); drawScales(ex, ey); drawChip(ex, ey); drawDNA();
+  head.r = [ey * .2 + Math.sin(t * .7) * .03, ex * .5 + Math.sin(t * .4) * .06, Math.sin(t * .5) * .04];
+  head.p = [0, .45 + Math.sin(t * .9) * .04, 0]; head.s = 1 + Math.sin(t * 1.1) * .012;
+  if (head.eyeL !== undefined) {
+    head.v[head.eyeL][0] = -.4 + ex * .05; head.v[head.eyeL + 1][0] = .4 + ex * .05;
+    head.v[head.eyeL][1] = .15 - ey * .05; head.v[head.eyeL + 1][1] = .15 - ey * .05;
+  }
+  torso.r = [0, ex * .15, 0]; torso.s = head.s;
+  xf(head); head.w.forEach((w, i) => pr(w, head.q[i]));
+  drawNet(dt, now);
+  if (SHOW_ROBOT) {
+    const hc = {}; pr([0, .45, 0], hc); dot(hc.x, hc.y, F * .075, 5, 'r', .2 + .15 * I);
+    drawMesh(torso, .8); drawMesh(head, 1);
+    const s1 = {}, s2 = {}; pr([-1.4, scanY, .9], s1); pr([1.4, scanY, .9], s2);
+    ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(60,150,255,${(.35 + .3 * I).toFixed(2)})`; ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
+    const blink = (t % 5.5) > 5.4 ? .15 : 1;
+    for (const k of [head.eyeL, head.eyeL + 1]) {
+      const q = head.q[k]; dot(q.x, q.y, .34 * q.k * blink + 1, 0, 'r', .95 * (.8 + .4 * I)); dot(q.x, q.y, .11 * q.k * blink + 1, 0, 'w', .95);
+    }
+  }
+  limbs.forEach(m => {
+    const b = m.base || [0,0,0], k = m.k || 0;
+    m.p = [b[0] + Math.sin(t * .3 + k) * .3, b[1] + Math.cos(t * .4 + k) * .3, b[2]];
+    m.r = [m.r[0] + m.rs[0] * dt, m.r[1] + m.rs[1] * dt, m.r[2] + m.rs[2] * dt]; drawMesh(m, .85);
+  });
+  drawGears(ex, ey); drawHud(); drawFX(now);
+  ripples = ripples.filter(r => now - r.t < 2200);
+  ripples.forEach(r => { const a = 1 - (now - r.t) / 2200; ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(60,150,255,.8)'; ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.arc(r.x, r.y, (now - r.t) * .9 * dpr, 0, 6.283); ctx.stroke(); });
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = vigGrad; ctx.fillRect(0, 0, W, H);
+}
+
+// ===================== LOOP AND EVENTS =====================
+let last = performance.now();
+function frame(now) {
+  if (!reduce) requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000 || .016); last = now; t += dt * C.SPEED; render(dt, now);
+}
+const mouse = { x: -1e4, y: -1e4, down: false, lx: 0, ly: 0 }, trail = []; let orbX = 0, orbY = 0, surge = 0;
+addEventListener('pointermove', e => {
+  ptr.active = true; ptr.tx = (e.clientX / innerWidth - .5) * 2; ptr.ty = (e.clientY / innerHeight - .5) * 2;
+  mouse.x = e.clientX * dpr; mouse.y = e.clientY * dpr;
+  if (mouse.down) { orbX += (e.clientX - mouse.lx) * .004; orbY = Math.max(-.5, Math.min(.5, orbY + (e.clientY - mouse.ly) * .003)); }
+  mouse.lx = e.clientX; mouse.ly = e.clientY; trail.push({ x: mouse.x, y: mouse.y, a: 1 }); if (trail.length > 40) trail.shift();
+});
+addEventListener('pointerdown', e => { mouse.down = true; mouse.lx = e.clientX; mouse.ly = e.clientY; mouse.x = e.clientX * dpr; mouse.y = e.clientY * dpr; surge = 1; ripples.push({ x: e.clientX * dpr, y: e.clientY * dpr, t: performance.now() }); });
+addEventListener('pointerup', e => { mouse.down = false; if (e.pointerType === 'touch') mouse.x = mouse.y = -1e4; });
+addEventListener('pointercancel', () => { mouse.down = false; mouse.x = mouse.y = -1e4; });
+addEventListener('wheel', e => { Dt = Math.max(5.5, Math.min(13, Dt + e.deltaY * .004)); }, { passive: true });
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
+addEventListener('resize', () => { layout(); initBg(); if (reduce) render(.016, performance.now()); });
+layout(); initBg(); initChip(); initNet(Math.round(innerWidth < 768 ? C.NET_NODES * .6 : C.NET_NODES));
+if (reduce) { t = 4; render(.016, performance.now()); } else requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
